@@ -1,0 +1,9 @@
+{
+  "string": [
+    { "name": "app_name", "value": "腕间通知" },
+    { "name": "entry_desc", "value": "管理手表连接和通知授权" },
+    { "name": "bluetooth_reason", "value": "用于识别已配对手表并关联通知订阅" },
+    { "name": "subscriber_desc", "value": "接收用户授权的通知，用于手表通知桥接验证" },
+    { "name": "subscriber_label", "value": "腕间通知订阅" }
+  ]
+}

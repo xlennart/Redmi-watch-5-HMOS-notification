@@ -1,0 +1,15 @@
+{
+  "name": "redmi-watch-hmos-notification-probe",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build:core": "node scripts/build-core.mjs",
+    "check": "node scripts/check-project.mjs",
+    "test": "npm run build:core && node --test tests/*.test.mjs",
+    "configure:baseline": "node scripts/configure-probe.mjs baseline",
+    "configure:notifications": "node scripts/configure-probe.mjs notifications"
+  },
+  "devDependencies": { "typescript": "5.9.3", "json5": "2.2.3" }
+}
