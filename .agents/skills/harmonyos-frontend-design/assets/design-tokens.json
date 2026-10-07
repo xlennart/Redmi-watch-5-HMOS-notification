@@ -1,0 +1,13 @@
+{
+  "profile": {"name": "harmony-project-starter", "version": "1.0.0", "authority": "project-defaults", "note": "可调整的项目默认值，非华为官方规格；目标项目规范优先。"},
+  "font_family": "\"HarmonyOS Sans SC\", \"Microsoft YaHei\", system-ui, sans-serif",
+  "colors": {
+    "light": {"page":"#F2F5F9","surface":"#FFFFFF","surface_alt":"#F7F9FC","text":"#182230","muted":"#536275","line":"#DDE4EE","action":"#0A59F7","action_pressed":"#0849CC","on_action":"#FFFFFF","action_surface":"#EAF2FF","success":"#13744F","danger":"#B42318","overlay":"#18223066"},
+    "dark": {"page":"#151922","surface":"#202631","surface_alt":"#29313E","text":"#F3F5F8","muted":"#B0BBCC","line":"#455164","action":"#83B3FF","action_pressed":"#A8CBFF","on_action":"#101827","action_surface":"#263B5C","success":"#70D3A8","danger":"#FFAAA5","overlay":"#00000099"}
+  },
+  "spacing": {"xs":4,"sm":8,"md":12,"lg":16,"xl":24,"xxl":32},
+  "font_size": {"caption":12,"secondary":14,"body":16,"section":18,"title":22,"display":28},
+  "radius": {"small":8,"medium":12,"large":20,"pill":999},
+  "motion_ms": {"micro":100,"local":180,"transition":260},
+  "layout": {"page_padding":16,"wide_padding":24,"content_max":1040,"medium_window":600,"wide_window":840}
+}

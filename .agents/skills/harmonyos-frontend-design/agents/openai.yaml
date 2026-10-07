@@ -1,0 +1,4 @@
+interface:
+  display_name: "鸿蒙前端综合设计"
+  short_description: "鸿蒙界面设计、交互原型、ArkUI 实现与动效评审，附可复用令牌"
+  default_prompt: "使用 $harmonyos-frontend-design 设计这个页面，按需求选择 HTML 原型或 ArkUI 实现，并说明实际验证范围。"

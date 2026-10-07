@@ -1,0 +1,22 @@
+name: Shared core and project integrity
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run check
+      - run: npm test
+      - run: npm run configure:notifications
+      - run: npm run check
+      - run: npm run configure:baseline
+      - run: git diff --exit-code -- entry/src/main/module.json5 entry/src/main/ets/config/ProbeMode.ets

@@ -1,0 +1,56 @@
+{
+  "color": [
+    {
+      "name": "start_window_background",
+      "value": "#111B1E"
+    },
+    {
+      "name": "wrist_page",
+      "value": "#111B1E"
+    },
+    {
+      "name": "wrist_surface",
+      "value": "#1C2A2E"
+    },
+    {
+      "name": "wrist_alt",
+      "value": "#26373B"
+    },
+    {
+      "name": "wrist_text",
+      "value": "#F0F6F3"
+    },
+    {
+      "name": "wrist_muted",
+      "value": "#B2C6C4"
+    },
+    {
+      "name": "wrist_action",
+      "value": "#80D9D6"
+    },
+    {
+      "name": "wrist_on_action",
+      "value": "#092D32"
+    },
+    {
+      "name": "wrist_action_surface",
+      "value": "#243F41"
+    },
+    {
+      "name": "wrist_warning",
+      "value": "#F4C779"
+    },
+    {
+      "name": "wrist_warning_surface",
+      "value": "#463720"
+    },
+    {
+      "name": "wrist_danger",
+      "value": "#FFB2A6"
+    },
+    {
+      "name": "wrist_divider",
+      "value": "#42585A"
+    }
+  ]
+}

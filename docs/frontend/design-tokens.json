@@ -1,0 +1,88 @@
+{
+  "profile": {
+    "name": "wrist-notifications",
+    "version": "0.1.0",
+    "authority": "project-proposal",
+    "note": "项目建议值；不是华为官方规格；保留现有墨色与青绿产品方向。"
+  },
+  "font_family": "\"HarmonyOS Sans SC\",\"Microsoft YaHei\",system-ui,sans-serif",
+  "colors": {
+    "light": {
+      "page": "#F4F7F5",
+      "surface": "#FFFFFF",
+      "surface-alt": "#EDF3F0",
+      "text": "#172F35",
+      "muted": "#566970",
+      "line": "#D9E4DF",
+      "action": "#066B75",
+      "action-pressed": "#04515A",
+      "on-action": "#FFFFFF",
+      "action-surface": "#E1F2EF",
+      "success": "#236449",
+      "success-surface": "#E7F3E9",
+      "warning": "#82500E",
+      "warning-surface": "#FFF1DB",
+      "danger": "#AA352B",
+      "danger-surface": "#FCEBE8",
+      "overlay": "#122B3566"
+    },
+    "dark": {
+      "page": "#111B1E",
+      "surface": "#1C2A2E",
+      "surface-alt": "#26373B",
+      "text": "#F0F6F3",
+      "muted": "#B2C6C4",
+      "line": "#42585A",
+      "action": "#80D9D6",
+      "action-pressed": "#A2E5E2",
+      "on-action": "#092D32",
+      "action-surface": "#243F41",
+      "success": "#8DDAAA",
+      "success-surface": "#254333",
+      "warning": "#F4C779",
+      "warning-surface": "#463720",
+      "danger": "#FFB2A6",
+      "danger-surface": "#482E2C",
+      "overlay": "#00000099"
+    }
+  },
+  "spacing": {
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "xxl": 32
+  },
+  "font_size": {
+    "caption": 12,
+    "secondary": 14,
+    "body": 16,
+    "section": 18,
+    "title": 22,
+    "display": 28
+  },
+  "radius": {
+    "small": 12,
+    "medium": 16,
+    "large": 24,
+    "pill": 999
+  },
+  "motion_ms": {
+    "micro": 100,
+    "local": 180,
+    "transition": 260
+  },
+  "layout": {
+    "page_padding": 16,
+    "wide_padding": 24,
+    "content_max": 1280,
+    "compact_max": 760,
+    "two_column_min": 1091
+  },
+  "accessibility": {
+    "prototype_large_text_scale": 1.25,
+    "min_touch_target_css_px": 48,
+    "focus_outline_css_px": 3
+  }
+}
