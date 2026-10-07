@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:,"><title>腕间通知 · 交互设计基线</title>
+<style>
+:root{--page:#F4F7F5;--surface:#FFFFFF;--surface-alt:#EDF3F0;--text:#172F35;--muted:#566970;--line:#D9E4DF;--action:#066B75;--action-pressed:#04515A;--on-action:#FFFFFF;--action-surface:#E1F2EF;--success:#236449;--success-surface:#E7F3E9;--warning:#82500E;--warning-surface:#FFF1DB;--danger:#AA352B;--danger-surface:#FCEBE8;--overlay:#122B3566;--shadow:0 6px 24px #18352A08;--radius:24px;--space-xs:4px;--space-sm:8px;--space-md:12px;--space-lg:16px;--space-xl:24px;--space-xxl:32px;--motion:180ms;font-size:16px;font-family:"HarmonyOS Sans SC","Microsoft YaHei",system-ui,sans-serif}
+[data-theme="dark"]{--page:#111B1E;--surface:#1C2A2E;--surface-alt:#26373B;--text:#F0F6F3;--muted:#B2C6C4;--line:#42585A;--action:#80D9D6;--action-pressed:#A2E5E2;--on-action:#092D32;--action-surface:#243F41;--success:#8DDAAA;--success-surface:#254333;--warning:#F4C779;--warning-surface:#463720;--danger:#FFB2A6;--danger-surface:#482E2C;--overlay:#00000099;--shadow:none;color-scheme:dark}
+[data-large="true"]{font-size:20px}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--page);color:var(--text);line-height:1.55}
+button,input,select{font:inherit}button,a,input,select{touch-action:manipulation}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.55}button:active:not(:disabled){filter:brightness(.94)}
+:focus-visible{outline:3px solid var(--action);outline-offset:4px}button{min-height:48px}a{color:var(--action)}
+h1,h2,h3,p{margin:0}h1{font-size:1.75rem;letter-spacing:-.035em;line-height:1.3;font-weight:700}h2{font-size:1.125rem;line-height:1.45}h3{font-size:1rem}p{overflow-wrap:anywhere}
+small,.caption{font-size:.75rem}.secondary-text{font-size:.875rem;color:var(--muted)}.muted{color:var(--muted)}.strong{font-weight:650}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}[hidden]{display:none!important}
+svg.icon{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.skip{position:absolute;top:-100px;left:16px;background:var(--surface);padding:12px;z-index:100}.skip:focus{top:12px}
+.review-bar{border-bottom:1px solid var(--line);padding:14px 24px;background:var(--surface)}
+.review-inner{max-width:1280px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.review-heading{font-size:.875rem;font-weight:650}.review-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.review-controls label{font-size:.75rem;color:var(--muted)}.review-controls select{max-width:100%;min-height:44px;border:1px solid var(--line);border-radius:12px;background:var(--surface-alt);color:var(--text);padding:8px 10px;font-size:.875rem}
+.review-button{border:1px solid var(--line);border-radius:12px;padding:8px 12px;background:var(--surface);color:var(--text);font-size:.875rem;min-height:44px}
+.review-note{max-width:1280px;margin:8px auto 0;color:var(--muted);font-size:.75rem}
+.shell{max-width:1280px;margin:auto;padding:28px 24px 40px;display:grid;grid-template-columns:184px minmax(0,1fr);gap:28px;align-items:start}
+.sidebar{position:sticky;top:24px}.brand{display:flex;align-items:center;gap:10px;margin-bottom:36px;font-size:1.125rem;font-weight:700}
+.brand-mark{width:36px;height:36px;display:grid;place-items:center;border-radius:12px;background:var(--action);color:var(--on-action)}
+.brand-mark svg{width:24px;height:24px}.brand small{display:block;font-weight:400;color:var(--muted);font-size:.6875rem;letter-spacing:.1em}
+nav{display:flex;flex-direction:column;gap:8px}.nav-button{display:flex;align-items:center;gap:14px;width:100%;border:0;border-radius:16px;padding:12px 16px;text-align:left;color:var(--muted);background:transparent;font-weight:600}
+.nav-button[aria-current="page"]{background:var(--action-surface);color:var(--action)}.sidebar-note{margin-top:36px;padding:16px 12px;border-top:1px solid var(--line);font-size:.75rem;color:var(--muted)}
+.content{min-width:0}.page-title{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin:4px 0 24px}.page-title p{margin-top:8px;font-size:.875rem;color:var(--muted)}
+.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 10px;background:var(--surface-alt);color:var(--muted);font-size:.75rem;font-weight:600;line-height:1.5}
+.badge.good{color:var(--success);background:var(--success-surface)}.badge.warn{color:var(--warning);background:var(--warning-surface)}.badge.error{color:var(--danger);background:var(--danger-surface)}.badge.active{color:var(--action);background:var(--action-surface)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);min-width:0}
+.grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:20px}.stack{display:flex;flex-direction:column;gap:20px}.full{grid-column:1/-1}
+.hero{background:var(--surface);position:relative;overflow:hidden}.hero-top{display:grid;grid-template-columns:minmax(0,1fr) 154px;gap:16px;align-items:center}
+.overline{color:var(--action);font-size:.75rem;letter-spacing:.08em;font-weight:650;margin-bottom:10px}.hero h2{font-size:1.5rem;letter-spacing:-.035em}.hero .device-caption{margin-top:8px}
+.watch-art{width:154px;height:184px;display:block;color:var(--action);flex:none}.watch-case{fill:#334B51;stroke:#526C6F;stroke-width:2}.watch-screen{fill:#102D33}.watch-strap{fill:#C4D3CF}.watch-text{fill:#ECF7F0;font-family:system-ui,sans-serif}
+.divider{height:1px;background:var(--line);margin:20px 0}.relay-copy h3{font-size:1.25rem;margin-bottom:8px}.relay-copy p{margin-bottom:16px;font-size:.875rem;color:var(--muted)}
+.actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.primary,.secondary,.danger-button,.text-button{border-radius:999px;padding:11px 20px;font-weight:600;line-height:1.5}
+.primary{border:1px solid var(--action);background:var(--action);color:var(--on-action)}.primary:active{background:var(--action-pressed)}
+.secondary{border:1px solid var(--line);background:var(--surface-alt);color:var(--text)}.danger-button{border:1px solid var(--danger);background:transparent;color:var(--danger)}
+.text-button{border:0;background:transparent;color:var(--action);padding:8px 12px}.main-action{min-width:180px}.fine-print{font-size:.75rem;color:var(--muted);margin-top:12px}
+.section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}.section-heading .text-button{font-size:.875rem}
+.status-list{display:flex;flex-direction:column;gap:20px}.status-item{display:flex;align-items:flex-start;gap:12px}.icon-box{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:var(--surface-alt);color:var(--action);flex:none}
+.status-body{min-width:0;flex:1}.status-body p{font-size:.875rem;color:var(--muted);margin-top:4px}.status-body strong{font-size:.9375rem}
+.callout{display:flex;gap:12px;border-radius:16px;background:var(--warning-surface);color:var(--warning);padding:16px;margin-bottom:20px;align-items:flex-start}.callout.error{color:var(--danger);background:var(--danger-surface)}.callout.info{color:var(--action);background:var(--action-surface)}
+.callout div{min-width:0;flex:1}.callout p{font-size:.875rem;margin-top:4px}.callout .text-button{color:inherit;padding:5px 0;min-height:44px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.stat-value{font-size:1.6rem;line-height:1.2;font-weight:700;letter-spacing:-.04em}.stat-label{font-size:.75rem;color:var(--muted);margin-top:6px}
+.feature-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.feature{border:1px solid var(--line);border-radius:16px;padding:16px;background:var(--surface);color:var(--text);text-align:left;min-width:0}
+.feature svg{margin-bottom:16px;color:var(--muted)}.feature strong{display:block;font-size:.875rem;margin-bottom:8px}.feature .badge{font-weight:400;font-size:.6875rem}
+.row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:17px 0;border-bottom:1px solid var(--line)}.row:last-child{border-bottom:0;padding-bottom:0}.row:first-child{padding-top:0}
+.row-text{min-width:0;flex:1}.row-text p{font-size:.875rem;color:var(--muted);margin-top:4px}.row-value{font-size:.875rem;color:var(--muted);text-align:right;max-width:45%;overflow-wrap:anywhere}
+.row-action{border:0;background:transparent;color:var(--action);min-width:48px;min-height:48px;padding:10px;border-radius:12px;display:grid;place-items:center}
+.device-summary{display:flex;align-items:center;gap:20px}.device-summary .watch-art{width:104px;height:134px}.device-summary h2{font-size:1.375rem;margin-bottom:8px}
+details{border-radius:16px;background:var(--surface-alt);padding:16px}details summary{font-weight:600;font-size:.875rem;cursor:pointer;min-height:28px}details p{font-size:.875rem;color:var(--muted);margin-top:12px}details .actions{margin-top:16px}
+.permission-list{display:flex;flex-direction:column;gap:12px;margin-top:16px}.app-row{display:flex;align-items:center;gap:12px}.app-avatar{display:grid;place-items:center;width:40px;height:40px;background:var(--surface-alt);color:var(--muted);border-radius:12px;font-size:.875rem;font-weight:650;flex:none}.app-row strong{font-size:.875rem}.app-row .badge{margin-left:auto}
+.back{margin-bottom:16px;display:inline-flex;align-items:center;gap:6px;padding-left:0}.steps{list-style:none;padding:0;margin:0 0 24px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.steps li{display:flex;align-items:center;gap:8px;font-size:.75rem;color:var(--muted)}
+.step-dot{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--surface-alt);border:1px solid var(--line);flex:none}.steps [aria-current="step"]{color:var(--action);font-weight:650}.steps [aria-current="step"] .step-dot{background:var(--action);color:var(--on-action);border-color:var(--action)}
+.wizard{max-width:740px}.wizard h2{font-size:1.25rem;margin-bottom:8px}.wizard>.secondary-text{margin-bottom:20px}.wizard .actions{margin-top:24px}
+.choice{display:flex;align-items:flex-start;gap:12px;border:1px solid var(--line);border-radius:16px;padding:16px;margin-top:12px;cursor:pointer;background:var(--surface)}.choice:has(input:checked){border-color:var(--action);background:var(--action-surface)}
+.choice input{accent-color:var(--action);width:20px;height:20px;margin:3px 0 0;flex:none}.choice strong{display:block}.choice small{display:block;color:var(--muted);margin-top:4px;line-height:1.6}
+.operation{border-radius:16px;background:var(--surface-alt);padding:16px;margin-top:20px}.operation p{font-size:.875rem}.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--action);border-radius:50%;animation:spin .9s linear infinite;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}.technical{font-family:ui-monospace,monospace;font-size:.75rem;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--muted)}
+.diag-actions{display:flex;flex-direction:column;gap:12px}.diag-actions button{text-align:left;border-radius:16px;display:flex;align-items:center;gap:12px}
+footer{margin-top:28px;color:var(--muted);font-size:.75rem;border-top:1px solid var(--line);padding-top:18px}
+dialog{width:min(480px,calc(100% - 32px));max-height:calc(100dvh - 40px);overflow:auto;border:1px solid var(--line);border-radius:24px;padding:24px;background:var(--surface);color:var(--text);box-shadow:0 20px 60px #0003}
+dialog::backdrop{background:var(--overlay)}dialog h2{font-size:1.25rem;margin-bottom:12px}dialog p{font-size:.875rem;color:var(--muted)}dialog .actions{justify-content:flex-end;margin-top:24px}dialog label{display:flex;align-items:center;gap:12px;min-height:48px;padding:8px 0;font-size:.875rem}dialog input{width:20px;height:20px;accent-color:var(--action)}
+.dialog-placeholder{min-height:110px;display:grid;place-items:center;background:var(--surface-alt);border:1px dashed var(--line);border-radius:16px;text-align:center;padding:16px;margin:16px 0}
+.notice{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 32px);background:var(--text);color:var(--surface);padding:12px 20px;border-radius:16px;font-size:.875rem;box-shadow:0 4px 20px #0002;z-index:20;pointer-events:none}
+@media(min-width:1440px){.shell{padding-top:40px;gap:40px}}
+@media(max-width:1090px){.grid{grid-template-columns:1fr}.feature-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hero-top{grid-template-columns:minmax(0,1fr) 174px}.watch-art{width:174px;height:190px}.hero .actions{margin-top:4px}}
+@media(max-width:760px){.review-bar{padding:12px 16px}.review-controls{width:100%}.review-controls select{flex:1;min-width:0}.review-controls label{width:100%}.shell{display:block;padding:20px 16px 108px}.sidebar{position:static}.brand{margin-bottom:24px}.sidebar-note{display:none}nav{position:fixed;inset:auto 0 0;flex-direction:row;justify-content:center;gap:4px;padding:8px 12px calc(8px + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--line);z-index:10}.nav-button{width:33.333%;flex-direction:column;justify-content:center;gap:4px;font-size:.75rem;padding:8px;border-radius:14px;min-height:62px}.nav-button svg{width:21px;height:21px}.page-title{margin-bottom:20px}.page-title .badge{flex:none}.card{padding:20px;--radius:20px}.hero-top{grid-template-columns:minmax(0,1fr) 116px;gap:12px}.watch-art{width:116px;height:150px}.hero h2{font-size:1.25rem}.main-action{flex:1}.notice{bottom:94px}.steps{gap:8px}.steps li{flex-direction:column;align-items:flex-start;gap:6px}.device-summary{gap:12px}.device-summary h2{font-size:1.2rem}}
+@media(max-width:380px){.hero-top{grid-template-columns:1fr}.hero-top .watch-art{display:none}.page-title{flex-wrap:wrap}.feature-grid{gap:8px}.feature{padding:12px}.row{gap:8px}.row-value{max-width:40%}.stats{gap:8px}}
+
+@media(max-width:600px){[data-large="true"] .hero-top{grid-template-columns:1fr}[data-large="true"] .hero-top .watch-art{display:none}[data-large="true"] .feature-grid{grid-template-columns:1fr}[data-large="true"] .row{flex-wrap:wrap}[data-large="true"] .row-value{max-width:100%;text-align:left}[data-large="true"] .actions>button{flex:1;min-width:140px}[data-large="true"] .device-summary .watch-art{display:none}[data-large="true"] .steps{grid-template-columns:repeat(2,minmax(0,1fr))}[data-large="true"] .steps li{flex-direction:row;align-items:center}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{animation:none!important;transition:none!important}}
+@media(forced-colors:active){button,.badge,.card,.choice{border:1px solid CanvasText}.nav-button[aria-current="page"]{outline:2px solid Highlight}.watch-art{display:none}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">跳到主要内容</a>
+<svg aria-hidden="true" width="0" height="0" style="position:absolute">
+<defs>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10H3Z"/><path d="M9 20v-7h6v7"/></symbol>
+<symbol id="i-watch" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="4"/><path d="M9 6V2h6v4M9 18v4h6v-4M18 10h2"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M5 17h14l-2-3V9a5 5 0 0 0-10 0v5Z"/><path d="M10 20h4M12 2v2"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 4-8 9-8 9S4 16 4 12V6Z"/><path d="m8 12 3 3 5-6"/></symbol>
+<symbol id="i-link" viewBox="0 0 24 24"><path d="m10 14 4-4M8 16l-1 1a4 4 0 0 1-6-6l5-5a4 4 0 0 1 6 0M16 8l1-1a4 4 0 0 1 6 6l-5 5a4 4 0 0 1-6 0" transform="translate(0 0) scale(.96)"/></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v.2"/></symbol>
+<symbol id="i-music" viewBox="0 0 24 24"><path d="M9 17V5l11-2v12M9 8l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/></symbol>
+<symbol id="i-health" viewBox="0 0 24 24"><path d="M21 12c0 5-9 10-9 10S3 17 3 12a5 5 0 0 1 9-3 5 5 0 0 1 9 3Z"/><path d="m4 13 4 0 2-3 3 6 2-3h5"/></symbol>
+<symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h5M15 6h5M4 12h9M19 12h1M4 18h1M11 18h9"/><circle cx="12" cy="6" r="3"/><circle cx="16" cy="12" r="3"/><circle cx="8" cy="18" r="3"/></symbol>
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
+<symbol id="watch-illustration" viewBox="0 0 160 200">
+<rect class="watch-strap" x="53" y="0" width="54" height="200" rx="21"/><path d="M68 10h24M68 190h24" stroke="#A7BDB6" stroke-width="3" stroke-linecap="round"/>
+<rect class="watch-case" x="31" y="37" width="98" height="126" rx="28"/><rect x="130" y="78" width="5" height="19" rx="2" fill="#526C6F"/>
+<rect class="watch-screen" x="38" y="44" width="84" height="112" rx="21"/>
+<circle cx="80" cy="76" r="15" fill="#204C50"/><path d="M71 82h18l-3-4v-6a6 6 0 0 0-12 0v6Z" fill="none" stroke="#8DDAD0" stroke-width="2" stroke-linejoin="round"/>
+<text class="watch-text" x="80" y="110" text-anchor="middle" font-size="12" font-weight="600">腕间通知</text>
+<text x="80" y="128" text-anchor="middle" fill="#A7C4BF" font-size="8">消息由你决定</text>
+<rect x="65" y="141" width="30" height="3" rx="1.5" fill="#4C766F"/>
+</symbol>
+</defs>
+</svg>
+<header class="review-bar">
+<div class="review-inner"><div class="review-heading">交互设计基线 <span class="badge">v0.1 · 浏览器原型</span></div>
+<div class="review-controls">
+<label for="scenario">评审情景</label>
+<select id="scenario">
+<option value="stopped">已初始化 · 转发停止</option><option value="running">转发开启</option><option value="connecting">消息通道连接中</option>
+<option value="disconnected">消息通道断线</option><option value="revoked">系统通知权限撤销</option><option value="empty">首次进入 · 无设备</option>
+<option value="no-material">有设备 · 无认证材料</option><option value="no-sources">已授权 · 无应用来源</option><option value="account-failed">网页登录后 · 账号同步失败</option>
+<option value="import-cancelled">日志导入取消</option><option value="import-error">日志导入错误</option><option value="unsupported">其他手表 · 协议未适配</option><option value="base-mode">基础构建 · 无通知订阅</option>
+</select>
+<button class="review-button" id="theme" aria-pressed="false">深色</button><button class="review-button" id="large" aria-pressed="false">大字 125%</button>
+<button class="review-button" id="simulate">模拟通知到来</button>
+</div></div>
+<p class="review-note">全部交互在本地模拟，不访问手机、蓝牙、通知、账号或文件。刷新即复位。计数、来源和时刻均为示例；不表示此刻的设备状态。</p>
+</header>
+<div class="shell">
+<aside class="sidebar">
+<div class="brand"><span class="brand-mark"><svg class="icon"><use href="#i-watch"/></svg></span><span>腕间通知<small>消息，由你决定</small></span></div>
+<nav aria-label="主要页面">
+<button class="nav-button" data-route="home" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg><span>今日</span></button>
+<button class="nav-button" data-route="device"><svg class="icon" aria-hidden="true"><use href="#i-watch"/></svg><span>设备</span></button>
+<button class="nav-button" data-route="notifications"><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg><span>通知</span></button>
+</nav>
+<p class="sidebar-note">原生 HarmonyOS 应用设计<br>通知优先，逐项验证。<br><br>Mate 70 Pro 优享版<br>当前目标 Redmi Watch 5</p>
+</aside>
+<main class="content" id="main" tabindex="-1">
+<section id="page-home" class="page" aria-labelledby="home-title">
+<div class="page-title"><div><h1 id="home-title" tabindex="-1">让消息来到手腕。</h1><p>随时看清状态，也随时停下来。</p></div><span class="badge">开发预览</span></div>
+<div class="callout" id="home-issue" hidden><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><div><strong id="home-issue-title"></strong><p id="home-issue-body"></p><button class="text-button" id="home-recover"></button></div></div>
+<div class="grid">
+<article class="card hero">
+<div class="hero-top"><div><div class="overline">你的手表</div><h2 data-device-name>Redmi Watch 5</h2><p class="device-caption secondary-text" data-device-description>已选择系统配对设备</p><div style="margin-top:12px"><span class="badge" data-link-badge>消息通道按需连接</span></div></div><svg class="watch-art" aria-hidden="true"><use href="#watch-illustration"/></svg></div>
+<div class="divider"></div>
+<div class="relay-copy"><h3 data-relay-title>通知转发已停止</h3><p data-relay-description>开启后，只转发系统授权应用的新通知。</p></div>
+<div class="actions"><button class="primary main-action" data-act="relay" data-relay-button>开启通知转发</button><button class="secondary" data-act="refresh">刷新状态</button></div>
+<p class="fine-print" data-relay-footnote>停止转发时，系统通知授权仍保留。</p>
+</article>
+<div class="stack">
+<article class="card"><div class="section-heading"><h2>转发准备</h2><button class="text-button" data-route="device">查看</button></div>
+<div class="status-list">
+<div class="status-item"><span class="icon-box"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg></span><div class="status-body"><strong data-auth-title>系统通知已授权</strong><p data-auth-description>已允许 3 个示例应用</p></div></div>
+<div class="status-item"><span class="icon-box"><svg class="icon" aria-hidden="true"><use href="#i-watch"/></svg></span><div class="status-body"><strong data-material-title>认证材料已准备</strong><p data-material-description>仅保存在手机安全存储</p></div></div>
+<div class="status-item"><span class="icon-box"><svg class="icon" aria-hidden="true"><use href="#i-link"/></svg></span><div class="status-body"><strong data-channel-title>最近消息通道</strong><p data-channel-description>尚未取得本次连接状态</p></div></div>
+</div></article>
+<article class="card"><div class="section-heading"><h2>本机累计记录</h2><span class="badge">示例数据</span></div><div class="stats"><div><div class="stat-value" data-count="received">6</div><div class="stat-label">通知回调</div></div><div><div class="stat-value" data-count="ack">4</div><div class="stat-label">手表收包</div></div><div><div class="stat-value" data-count="failed">0</div><div class="stat-label">转发失败</div></div></div><p class="fine-print">收包仅代表传输确认，是否显示仍需确认。只记录来源与计数，不保存消息正文。</p></article>
+</div>
+<article class="card full"><div class="section-heading"><div><h2>逐步完善腕间体验</h2><p class="secondary-text" style="margin-top:4px">以下功能尚未实现，当前不会读取相关数据。</p></div></div>
+<div class="feature-grid">
+<button class="feature" data-feature="music"><svg class="icon" aria-hidden="true"><use href="#i-music"/></svg><strong>手机音乐控制</strong><span class="badge">尚未实现</span></button>
+<button class="feature" data-feature="health"><svg class="icon" aria-hidden="true"><use href="#i-health"/></svg><strong>睡眠与活动</strong><span class="badge">尚未实现</span></button>
+<button class="feature" data-feature="settings"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg><strong>设备设置</strong><span class="badge">部分能力待实现</span></button>
+<button class="feature" data-feature="resources"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg><strong>表盘与资源</strong><span class="badge">尚未实现</span></button>
+</div></article>
+</div>
+</section>
+<section id="page-device" class="page" aria-labelledby="device-title" hidden>
+<div class="page-title"><div><h1 id="device-title" tabindex="-1">你的设备</h1><p>日常状态在这里，初始化和诊断各有入口。</p></div></div>
+<div class="grid">
+<div class="stack">
+<article class="card"><div class="device-summary"><svg class="watch-art" aria-hidden="true"><use href="#watch-illustration"/></svg><div><div class="overline">当前目标</div><h2 data-device-name></h2><span class="badge" data-link-badge></span><p class="secondary-text" data-device-description style="margin-top:8px"></p></div></div>
+<div class="divider"></div><div class="row"><div class="row-text"><strong>系统配对</strong><p>配对状态与消息通道分别检查</p></div><span class="row-value" data-paired-status></span></div>
+<div class="row"><div class="row-text"><strong>电量</strong></div><span class="row-value">暂未读取</span></div>
+<div class="row"><div class="row-text"><strong>固件版本</strong></div><span class="row-value">暂未读取</span></div>
+<div class="actions" style="margin-top:20px"><button class="secondary" data-act="setup">设备初始化</button><button class="text-button" data-act="change-device">选择另一台</button></div></article>
+<article class="card"><h2>认证与授权</h2><div class="row" style="margin-top:20px"><div class="row-text"><strong data-material-title></strong><p data-material-description></p></div><button class="row-action" data-act="material" aria-label="管理认证材料"><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button></div>
+<div class="row"><div class="row-text"><strong data-auth-title></strong><p data-auth-description></p></div><button class="row-action" data-act="permissions" aria-label="管理系统通知授权"><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button></div>
+<div class="row"><div class="row-text"><strong>账号同步 <span class="badge warn">待验证</span></strong><p id="account-summary">官方服务会话回退仍待真机验证；日志导入可继续使用。</p></div><button class="row-action" data-act="account" aria-label="查看账号同步"><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button></div></article>
+</div>
+<div class="stack">
+<article class="card"><h2>需要排查时</h2><p class="secondary-text" style="margin-top:10px">查看消息通道、固定测试与传输记录。诊断运行前需要停止通知转发。</p><button class="secondary" data-route="diagnostics" style="margin-top:20px">诊断与验证</button></article>
+<article class="card"><h2>数据留在本机</h2><p class="secondary-text" style="margin-top:10px">认证材料不显示、不复制；消息正文只在转发时短暂驻留内存。导入的原文件由你自行保管。</p><div style="margin-top:20px"><details><summary>高级管理</summary><p>删除认证材料会先停止通知转发。停止订阅后，再次接收需要重新关联设备。</p><div class="actions"><button class="secondary" data-act="unsubscribe">停止系统通知订阅</button><button class="danger-button" data-act="delete-material">删除认证材料</button></div></details></div></article>
+</div></div>
+</section>
+<section id="page-notifications" class="page" aria-labelledby="notifications-title" hidden>
+<div class="page-title"><div><h1 id="notifications-title" tabindex="-1">通知，由你决定。</h1><p>只转发系统授予的来源；无需在应用里重复勾选。</p></div></div>
+<div class="grid">
+<div class="stack">
+<article class="card"><div class="section-heading"><h2 data-relay-title></h2><span class="badge" data-relay-badge></span></div><p class="secondary-text" data-relay-description></p><div class="actions" style="margin-top:20px"><button class="primary" data-act="relay" data-relay-button></button></div><p class="fine-print" data-relay-footnote></p></article>
+<article class="card"><div class="section-heading"><h2>系统通知授权</h2><span class="badge" data-auth-badge></span></div><p class="secondary-text" data-auth-description></p><div class="permission-list" id="source-list"></div><button class="secondary" data-act="permissions" style="margin-top:20px">管理系统通知授权</button><p class="fine-print">应用来源和授权结果由系统提供。返回后重新读取，取消操作保留原状态。</p></article>
+</div>
+<div class="stack">
+<article class="card"><h2>本轮转发规则</h2><div class="row" style="margin-top:20px"><div class="row-text"><strong>新的通知与更新</strong><p>等待发送的同一通知会更新内容。</p></div></div><div class="row"><div class="row-text"><strong>停止转发</strong><p>清空待发队列并关闭当前会话；已发送的帧可能已经到达手表。</p></div></div><div class="row"><div class="row-text"><strong>取消通知</strong><p>移除等待发送的条目，当前不保证撤销手表上已显示的提醒。</p></div></div><div class="row"><div class="row-text"><strong>遇到失败</strong><p>显示可恢复的问题，不盲目重复发送。</p></div></div></article>
+<article class="card"><h2>后续通知选项</h2><div class="row" style="margin-top:20px"><div class="row-text"><strong>免打扰时段</strong><p>目前请使用手表自身的免打扰设置。</p></div><span class="badge">尚未实现</span></div><div class="row"><div class="row-text"><strong>应用内筛选规则</strong><p>本轮以系统授权清单为准。</p></div><span class="badge">尚未实现</span></div></article>
+</div></div>
+</section>
+<section id="page-setup" class="page" aria-labelledby="setup-title" hidden>
+<button class="text-button back" data-act="exit-setup"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>返回</button>
+<div class="page-title"><div><h1 id="setup-title" tabindex="-1">把手表准备好。</h1><p>在手机上完成，电脑只用于开发。</p></div><span class="badge">初始化引导</span></div>
+<ol class="steps" aria-label="初始化步骤"><li data-step-marker="1"><span class="step-dot">1</span>选择设备</li><li data-step-marker="2"><span class="step-dot">2</span>准备认证</li><li data-step-marker="3"><span class="step-dot">3</span>允许通知</li><li data-step-marker="4"><span class="step-dot">4</span>完成设置</li></ol>
+<article class="card wizard">
+
+<div id="wizard-step-1"><h2>选择系统已配对的手表</h2><p class="secondary-text">本轮消息协议适配 Redmi Watch 5。其他候选设备可以识别，但暂时无法转发。</p><button class="secondary" data-act="find" style="margin-top:20px">查找已配对设备</button>
+<div id="device-choices" hidden><label class="choice"><input type="radio" name="candidate" value="redmi"><span><strong>Redmi Watch 5</strong><small>示例配对候选 · 消息协议已适配<br>配对和通话连接不代表消息通道已认证。</small></span></label><label class="choice"><input type="radio" name="candidate" value="other"><span><strong>其他品牌手表</strong><small>示例配对候选 · 消息协议暂未适配</small></span></label></div>
+<p class="secondary-text" id="find-status" style="margin-top:16px">如果尚未配对，请先在系统蓝牙设置中完成配对。</p>
+<div class="actions"><button class="primary" data-act="select-device" id="select-device-button" disabled>使用这台设备</button></div></div>
+<div id="wizard-step-2" hidden><h2>准备手表认证材料</h2><p class="secondary-text" style="margin-bottom:20px">从手机日志导入是当前可用路线。材料由后台处理，页面只显示导入结果。</p>
+<div class="callout info" id="existing-material" hidden><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg><div><strong>已有认证材料</strong><p>重新导入取消或失败时，已保存材料仍保留。</p></div></div>
+<details><summary>如何从手机取得日志</summary><p>在卓易通的小米运动健康中，进入“我的 → 关于”，连续点击橙色图标并确认导出。将 ZIP 保存或分享到手机文件管理，再从这里选取。文件须小于 64 MB，单份日志小于 16 MB。</p><p>只选择自己的手表记录。原文件可能包含敏感内容，请自行妥善保管。</p></details>
+<div class="actions"><button class="primary" data-act="import">从手机日志导入</button><button class="text-button" data-act="account">账号同步 · 待验证</button></div>
+<div class="operation" id="import-status" hidden><p id="import-status-text"></p><div class="actions"><button class="secondary" id="cancel-import" data-act="cancel-import" hidden>取消本次导入</button></div></div>
+<div id="import-candidates" hidden><label class="choice"><input type="radio" name="import-candidate" value="sample-1" checked><span><strong>Redmi Watch 5 · 记录 1</strong><small>示例认证记录 · 地址末尾 **:A7<br>请选择自己的手表。不会显示认证密钥。</small></span></label><div class="actions"><button class="primary" data-act="save-candidate">确认并保存到安全存储</button><button class="secondary" data-act="discard-candidate">取消本次导入</button></div></div>
+<div class="actions"><button class="secondary" data-act="wizard-prev">上一步</button><button class="primary" data-act="wizard-next" id="material-next" disabled>继续设置通知</button></div></div>
+<div id="wizard-step-3" hidden><h2>允许需要转发的通知</h2><p class="secondary-text">通过系统页面关联设备并选择应用来源。关闭授权会阻止新的转发。</p><div class="operation"><strong data-auth-title></strong><p data-auth-description style="margin-top:6px"></p></div><div class="actions"><button class="secondary" data-act="permissions">打开系统通知授权</button></div><div class="actions"><button class="secondary" data-act="wizard-prev">上一步</button><button class="primary" data-act="wizard-next" id="permission-next" disabled>检查设置结果</button></div></div>
+<div id="wizard-step-4" hidden><span class="badge good">初始化完成 · 模拟结果</span><h2 style="margin-top:16px">准备好，按你的节奏开启。</h2><p class="secondary-text">设备、认证材料和系统授权已准备。转发由你手动开启。</p><div class="operation"><strong data-relay-title></strong><p data-relay-description style="margin-top:6px"></p></div><div class="actions"><button class="primary" data-act="finish-setup">完成并回首页</button><button class="secondary" data-act="wizard-prev">返回授权设置</button></div></div>
+</article>
+</section>
+<section id="page-diagnostics" class="page" aria-labelledby="diagnostics-title" hidden>
+<button class="text-button back" data-route="device"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>返回设备</button>
+<div class="page-title"><div><h1 id="diagnostics-title" tabindex="-1">诊断与验证</h1><p>技术细节只在需要排查时展开。</p></div><span class="badge">高级入口</span></div>
+<div class="callout" id="diagnostic-lock" hidden><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><div><strong>通知转发开启，诊断暂不可用</strong><p>两者共用消息通道。停止转发后再检查，诊断结束不会自动重新开启。</p><button class="text-button" data-act="stop-for-diagnostic">停止转发并继续诊断</button></div></div>
+<div class="grid">
+<article class="card"><h2>消息通道检查</h2><p class="secondary-text" style="margin:8px 0 20px">选择已适配设备并准备认证材料后可执行。测试结果分为传输收包与实际显示。</p>
+<div class="diag-actions"><button class="secondary" data-act="diag-channel" data-diagnostic><svg class="icon" aria-hidden="true"><use href="#i-link"/></svg>检查消息通道</button><button class="secondary" data-act="diag-test" data-diagnostic><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg>认证并发送固定测试提醒</button><button class="secondary" data-act="diag-vibrate" data-diagnostic><svg class="icon" aria-hidden="true"><use href="#i-watch"/></svg>测试手表震动</button><button class="secondary" data-act="diag-enable" data-diagnostic><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg>开启手表通知类别并测试</button></div><p class="fine-print">最后一项会修改手表通知总开关和“其他应用”类别，执行前单独确认。</p>
+<div class="operation" id="diagnostic-result"><p id="diagnostic-result-text">等待检查。浏览器原型仅模拟流程，不发送报文。</p><div class="actions" id="display-confirmation" hidden><button class="primary" data-act="confirm-visible">我在表上看到了</button><button class="secondary" data-act="confirm-invisible">未看到</button></div></div>
+</article>
+<div class="stack">
+<article class="card"><h2>本机累计计数</h2><div class="row" style="margin-top:20px"><span>通知回调</span><span data-count="received"></span></div><div class="row"><span>手表收包</span><span data-count="ack"></span></div><div class="row"><span>转发失败</span><span data-count="failed"></span></div><div class="row"><span>跳过条目</span><span data-count="dropped"></span></div><p class="fine-print">不是独立消息数或送达数；示例中不保存正文。</p></article>
+<article class="card"><details><summary>技术详情</summary><p class="technical" id="tech-detail">当前无错误</p><p>协议版本、错误阶段和错误码用于排查。认证密钥、账号会话、原始报文与消息正文不进入页面。</p></details></article>
+<article class="card"><h2>已有验收范围</h2><p class="secondary-text" style="margin-top:8px">截至 2026-10-07：固定提醒与“腕间测试源2”的系统回调自动转发已由用户确认在表上显示。</p><p class="fine-print">锁屏、后台、断线重连与重启仍待验收。此段为已有记录，原型操作不会追加真机证据。</p></article>
+</div></div>
+</section>
+<footer>腕间通知 · 前端设计基线 v0.1<br>浏览器模拟交互。原生 ArkUI V1 / API 26 的实现与真机验收仍需后续完成。</footer>
+</main>
+</div>
+<div id="notice" class="notice" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+<dialog id="dialog" aria-labelledby="dialog-title"><h2 id="dialog-title"></h2><div id="dialog-content"></div><div class="actions" id="dialog-actions"></div></dialog>
+<script>
+(function(){
+'use strict';
+var $=function(id){return document.getElementById(id)};
+var state, generation=0, timer=null, noticeTimer=null, route='home', step=1, origin='device', dialogOrigin=null;
+var sources=[{id:'source-demo-2',name:'腕间测试源2',initial:'测'},{id:'source-demo-a',name:'示例消息应用 A',initial:'A'},{id:'source-demo-b',name:'示例消息应用 B',initial:'B'}];
+function baseline(){return {device:'redmi',material:true,grant:true,allowed:sources.map(function(s){return s.id}),mode:'notification',relay:false,connection:'unknown',lastAck:false,sessionBusy:false,pending:'',importState:'idle',candidate:false,issue:'',accountFailure:false,diagResult:'等待检查。浏览器原型仅模拟流程，不发送报文。',confirmation:false,display:'unknown',received:6,ack:4,failed:0,dropped:0,lastCode:0};}
+function all(selector,fn){document.querySelectorAll(selector).forEach(fn)}
+function setText(selector,text){all(selector,function(el){el.textContent=text})}
+function flash(message){clearTimeout(noticeTimer);$('notice').textContent='模拟 · '+message;$('notice').hidden=false;noticeTimer=setTimeout(function(){$('notice').hidden=true},4500)}
+function focusTitle(){var title=document.querySelector('#page-'+route+' h1');if(title)title.focus({preventScroll:true})}
+function navigate(next,focus){route=next;all('.page',function(page){page.hidden=page.id!=='page-'+next});all('[data-route]',function(el){if(!el.classList.contains('nav-button'))return;var current=el.dataset.route===next||(next==='diagnostics'||next==='setup')&&el.dataset.route==='device';if(current)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current')});render();if(focus!==false){focusTitle();window.scrollTo({top:0,behavior:'auto'})}}
+function showDialog(title,content,actions){dialogOrigin=document.activeElement;$('dialog-title').textContent=title;$('dialog-content').innerHTML=content;$('dialog-actions').replaceChildren();actions.forEach(function(action){var b=document.createElement('button');b.className=action.kind||'secondary';b.textContent=action.label;b.addEventListener('click',function(){action.run()});$('dialog-actions').appendChild(b)});$('dialog').showModal();}
+function closeDialog(){if($('dialog').open)$('dialog').close();}
+$('dialog').addEventListener('close',function(){if(dialogOrigin&&dialogOrigin.isConnected&&!dialogOrigin.disabled)dialogOrigin.focus()});
+function confirmAction(title,content,label,action,danger){showDialog(title,'<p>'+content+'</p>',[{label:'取消',run:closeDialog},{label:label,kind:danger?'danger-button':'primary',run:function(){closeDialog();action()}}])}
+function cancelPending(){generation++;clearTimeout(timer);timer=null;state.pending='';}
+function asyncOp(name,action,delay){if(state.pending){flash('已有操作正在进行');return;}var epoch=++generation;state.pending=name;if(state.sessionBusy){state.sessionBusy=false;state.connection='unknown';}render();timer=setTimeout(function(){if(epoch!==generation)return;state.pending='';action();render()},delay||700)}
+function startSetup(targetStep){origin=route==='setup'?origin:route;step=targetStep||(!state.device?1:!state.material?2:!state.grant?3:4);navigate('setup')}
+function blockers(){if(state.mode!=='notification')return 'base-mode';if(!state.device)return 'empty';if(state.device==='other')return 'unsupported';if(!state.material)return 'no-material';if(!state.grant)return 'revoked';if(state.connection==='disconnected'&&state.relay)return 'disconnected';if(!state.allowed.length)return 'no-sources';return state.issue;}
+function render(){
+var name=state.device==='redmi'?'Redmi Watch 5':state.device==='other'?'其他品牌手表':'还没有选择手表';
+setText('[data-device-name]',name);setText('[data-device-description]',!state.device?'先从系统已配对设备中选择':state.device==='other'?'候选已识别，消息协议尚未适配':'已选择系统配对设备');
+setText('[data-paired-status]',state.device?'已选择 · 示例候选':'未选择');
+var linkText=state.connection==='connecting'?'消息通道正在连接':state.connection==='authenticating'?'消息通道正在认证':state.connection==='disconnected'?'最近连接失败':state.device==='other'?'消息协议未适配':!state.device?'设备待选择':'消息通道按需连接';
+all('[data-link-badge]',function(el){el.textContent=linkText;el.className='badge '+(state.connection==='disconnected'?'error':state.connection==='connecting'||state.connection==='authenticating'?'active':'')});
+var blocked=blockers();var relayTitle=state.relay?(blocked==='revoked'||blocked==='base-mode'?'转发已开启 · 权限阻断':blocked==='disconnected'?'转发已开启 · 等待恢复':'通知转发已开启'):'通知转发已停止';
+var relayDescription=state.relay?(blocked==='revoked'?'系统通知权限已撤销，新的通知无法转发。':blocked==='disconnected'?'最近消息通道连接失败。开关仍开启；恢复后仅处理新的通知。':'新通知到来时连接和认证；当前没有持续在线保证。'):'开启后，只转发系统授权应用的新通知。';
+if(!state.device)relayDescription='选择手表并完成初始化，再开启通知转发。';
+if(state.device==='other')relayDescription='当前目标协议未适配，暂时无法开启通知转发。';
+if(state.mode!=='notification')relayDescription='当前构建未启用通知订阅，需要通知模式构建。';
+setText('[data-relay-title]',relayTitle);setText('[data-relay-description]',relayDescription);
+all('[data-relay-button]',function(el){el.textContent=state.pending==='start'?'正在检查条件…':state.pending==='stop'?'正在停止…':state.relay?'停止通知转发':!state.device?'开始初始化':!state.material?'准备认证材料':!state.grant?'允许系统通知':'开启通知转发';el.disabled=Boolean(state.pending)||state.device==='other'||state.mode!=='notification';});
+setText('[data-relay-footnote]',state.relay?'可随时停止；已发出的帧可能已到手表。':'停止转发时，系统通知授权仍保留。');
+all('[data-relay-badge]',function(el){el.textContent=state.relay?'开关已开启':'开关已停止';el.className='badge '+(state.relay?'active':'')});
+setText('[data-auth-title]',state.mode!=='notification'?'此构建不支持通知订阅':state.grant?'系统通知已授权':'系统通知待授权');
+setText('[data-auth-description]',state.mode!=='notification'?'基础构建没有通知订阅能力':state.grant?'已允许 '+state.allowed.length+' 个示例应用':'返回系统授权页选择需要转发的应用');
+all('[data-auth-badge]',function(el){el.textContent=state.grant?'已授权':'待授权';el.className='badge '+(state.grant?'good':'warn')});
+setText('[data-material-title]',state.material?'认证材料已准备':'认证材料待准备');
+setText('[data-material-description]',state.material?'仅保存在手机安全存储':'从手机日志导入并确认保存');
+setText('[data-channel-description]',state.connection==='connecting'?'正在建立消息通道；尚未确认收包':state.connection==='authenticating'?'正在认证；尚未确认收包':state.connection==='disconnected'?'最近连接失败，未重发失败消息':state.lastAck?'最近传输已收包 · 示例 14:32；不表示当前在线':'本次状态未知；配对不代表消息通道在线');
+all('[data-count]',function(el){el.textContent=String(state[el.dataset.count])});
+var issueMap={
+'empty':['先选择你的手表','从系统已经配对的设备中选择，本轮支持 Redmi Watch 5。','开始初始化','setup'],
+'no-material':['还差一步：准备认证材料','日志导入在本机处理。确认自己的设备后保存即可。','准备认证材料','material'],
+'unsupported':['这台手表暂未适配','候选已识别，尚不能开启通知转发。','重新选择设备','change-device'],
+'base-mode':['当前构建不支持通知订阅','安装通知模式构建后，才能请求系统通知授权。','查看诊断说明','diagnostics'],
+'revoked':['系统通知权限待恢复','恢复授权前新的通知无法转发。转发开关保持原状态，可手动停止。','管理系统授权','permissions'],
+'disconnected':['最近连接未完成','检查手表距离与蓝牙。失败通知不会盲目重发。','查看诊断','diagnostics'],
+'no-sources':['还没有选择应用来源','系统授权已允许，但没有获准的应用；开启后暂无通知来源。','选择通知来源','permissions'],
+'import-cancelled':['本次导入已取消','未保存本次材料；之前保存的认证材料仍保留。','继续导入','material'],
+'import-error':['日志未能读取','请重新导出符合大小限制的 ZIP 或日志文件。','重新导入','material']
+};
+var issue=issueMap[blocked];$('home-issue').hidden=!issue;if(issue){$('home-issue').className='callout '+(['disconnected','import-error'].includes(blocked)?'error':'');$('home-issue-title').textContent=issue[0];$('home-issue-body').textContent=issue[1];$('home-recover').textContent=issue[2];$('home-recover').dataset.act=issue[3];}
+$('account-summary').textContent=state.accountFailure?'网页登录完成，设备同步未完成。可继续使用日志导入。':'官方服务会话回退仍待真机验证；日志导入可继续使用。';
+$('source-list').replaceChildren();
+if(!state.grant||!state.allowed.length){var p=document.createElement('p');p.className='secondary-text';p.textContent=state.grant?'当前没有获准的应用来源。':'尚未取得系统授权清单。';$('source-list').appendChild(p)}else sources.filter(function(source){return state.allowed.includes(source.id)}).forEach(function(source){var row=document.createElement('div');row.className='app-row';row.innerHTML='<span class="app-avatar" aria-hidden="true">'+source.initial+'</span><div><strong>'+source.name+'</strong><p class="caption muted">示例来源</p></div><span class="badge good">系统已允许</span>';$('source-list').appendChild(row)});
+$('diagnostic-lock').hidden=!state.relay;
+all('[data-diagnostic]',function(el){el.disabled=state.relay||Boolean(state.pending)||state.device!=='redmi'||!state.material;});
+$('diagnostic-result-text').textContent=state.diagResult;$('display-confirmation').hidden=!state.confirmation;
+
+$('tech-detail').textContent='构建：'+(state.mode==='notification'?'通知模式':'基础模式')+'\n消息通道：'+state.connection+'\n最近错误码：'+state.lastCode+'\n统计语义：回调 / 收包 / 失败 / 跳过\n账号同步：'+(state.accountFailure?'服务会话阶段 -12；回退待真机验证':'回退待真机验证')+'\n认证材料：'+(state.material?'已保存（密钥不可见）':'未保存');
+all('[data-step-marker]',function(el){if(Number(el.dataset.stepMarker)===step)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current')});
+for(var n=1;n<=4;n++)$('wizard-step-'+n).hidden=n!==step;
+$('existing-material').hidden=!state.material;$('material-next').disabled=!state.material||Boolean(state.pending);$('permission-next').disabled=!state.grant||state.mode!=='notification'||Boolean(state.pending);
+$('import-candidates').hidden=!state.candidate;$('import-status').hidden=state.importState==='idle';$('cancel-import').hidden=state.importState!=='reading';
+var importMessages={reading:'正在读取并识别示例日志… 无法确定完成时间。',cancelled:'导入已取消。未保存本次材料，原有材料仍保留。',error:'日志未能读取。请使用小米运动健康导出的 ZIP 或日志；文件须小于 64 MB，单份日志小于 16 MB。',candidates:'已识别 1 条示例记录，确认后才会保存。',saved:'模拟结果：认证材料已保存在安全存储。'};
+$('import-status-text').textContent=importMessages[state.importState]||'';
+all('[data-act="import"],[data-act="account"],[data-act="save-candidate"],[data-act="delete-material"],[data-act="find"],[data-act="change-device"],[data-act="unsubscribe"]',function(el){el.disabled=Boolean(state.pending)});
+all('[data-act="permissions"]',function(el){el.disabled=Boolean(state.pending)||state.mode!=='notification'||!state.device});
+$('simulate').disabled=Boolean(state.pending)||state.device!=='redmi';
+}
+function stopRelay(after){asyncOp('stop',function(){state.relay=false;state.sessionBusy=false;state.connection='unknown';state.confirmation=false;flash('已停止新增转发；已发帧可能已到手表。');if(after)after()});}
+function relayAction(){if(state.pending)return;if(state.relay){stopRelay();return;}if(!state.device){startSetup(1);return;}if(!state.material){startSetup(2);return;}if(!state.grant){permissions();return;}asyncOp('start',function(){state.relay=true;state.connection='unknown';state.issue='';flash('转发开关已开启，等待新的通知。')});}
+function permissions(){
+if(!state.device){startSetup(1);return;}if(state.mode!=='notification'){flash('当前构建没有通知订阅能力');return;}
+var content='<p>系统授权交互示意。此原型不会打开系统设置或读取应用列表。确认后模拟系统返回结果；取消保留原状态。</p>';
+sources.forEach(function(source){content+='<label><input type="checkbox" name="source" value="'+source.id+'" '+(state.grant&&state.allowed.includes(source.id)?'checked':'')+'>'+source.name+'（示例）</label>';});
+showDialog('管理系统通知授权',content,[{label:'取消',run:closeDialog},{label:'模拟权限撤销',run:function(){closeDialog();state.grant=false;state.allowed=[];render();flash('权限已撤销，新的转发被阻断。')}},{label:'确认授权结果',kind:'primary',run:function(){var checked=Array.from($('dialog').querySelectorAll('[name="source"]:checked')).map(function(el){return el.value});closeDialog();asyncOp('permissions',function(){state.grant=true;state.allowed=checked;flash('已重新读取系统授权结果。')})}}]);
+}
+function importStart(result){state.issue='';state.importState='reading';state.candidate=false;asyncOp('import',function(){if(result==='success'){state.importState='candidates';state.candidate=true;flash('已识别记录，等待确认保存。')}else{state.importState=result==='cancel'?'cancelled':'error';state.issue=result==='cancel'?'import-cancelled':'import-error';flash(result==='cancel'?'导入已取消，原有材料保留。':'导入未完成，原有材料保留。')}},1600);}
+function importDialog(){showDialog('选择日志文件 · 交互示意','<p>原生实现由系统文件选择器提供文件，后台导入服务读取。本原型不访问任何文件。</p><div class="dialog-placeholder">示例文件：设备日志.zip<br><span class="caption muted">只模拟结果，不包含用户日志或密钥。</span></div>',[{label:'模拟读取错误',run:function(){closeDialog();importStart('error')}},{label:'取消选取',run:function(){closeDialog();state.importState='cancelled';state.issue='import-cancelled';state.candidate=false;render();flash('已取消选取，原有材料保留。')}},{label:'模拟选取成功',kind:'primary',run:function(){closeDialog();importStart('success')}}]);}
+function accountDialog(){showDialog('账号同步 · 待验证','<p>原生版本在小米官方页面登录。网页登录成功后，仍需完成运动健康服务会话及设备同步。</p><div class="dialog-placeholder">官方登录视图占位<br><span class="caption muted">原型不收集账号、密码或 Cookie。</span></div><p>此前服务会话返回 -12，新增官方 Cookie 回退尚未真机验证。可继续使用已验证的日志导入路线。</p>',[{label:'返回',run:closeDialog},{label:'模拟网页登录后同步',kind:'primary',run:function(){closeDialog();asyncOp('account',function(){state.accountFailure=true;render();showDialog('网页登录完成，设备同步未完成','<p>未取得有效设备认证记录。已有认证材料保留，可改用手机日志继续初始化。</p><details style="margin-top:16px"><summary>查看技术详情</summary><p class="technical">阶段：运动健康服务会话\n错误码：-12\n官方 Cookie 回退：待真机验证</p></details>',[{label:'稍后处理',run:closeDialog},{label:'改用日志导入',kind:'primary',run:function(){closeDialog();startSetup(2)}}])},1100)}}]);}
+function runDiagnostic(kind){
+if(state.relay){flash('请先停止通知转发');return;}if(state.pending||state.device!=='redmi'||!state.material)return;
+state.diagResult='正在建立消息通道并认证…';state.confirmation=false;state.display='unknown';state.connection='connecting';
+asyncOp('diagnostic',function(){state.connection='unknown';state.lastAck=true;state.lastCode=0;
+if(kind==='channel'){state.diagResult='模拟结果：取得协议版本 3，诊断连接已关闭；未执行密钥认证。';state.confirmation=false;}
+else{state.diagResult=kind==='vibrate'?'模拟结果：测试震动报文已收包，尚未确认实际震动。':'模拟结果：固定测试报文已收包，尚未确认实际显示。';state.confirmation=true;}
+},1200);
+}
+var featureDetails={
+music:['手机音乐控制','尚未实现播放、暂停、切歌、音量和状态回传。需要验证鸿蒙媒体会话权限与目标播放器；手表本地音乐传输属于另一项能力。'],
+health:['睡眠、活动与运动','目前只有统一数据契约，尚未读取目标手表数据。不会展示虚构步数、睡眠时长或运动记录。'],
+settings:['设备设置','当前已有通知类别配置读写，用于诊断；时间、语言及其他设置尚未实现。诊断修改须明确确认。'],
+resources:['表盘与资源','表盘、快应用与手表本地音乐目前只有服务契约。文件列表、容量、安装、传输进度及取消仍待实现。']
+};
+function act(name){
+switch(name){
+case 'relay':relayAction();break;
+case 'refresh':asyncOp('refresh',function(){flash('示例状态已刷新；不代表持续连接。')});break;
+case 'setup':startSetup();break;
+case 'material':startSetup(2);break;
+case 'change-device':if(state.relay)confirmAction('切换设备前停止转发','停止后可重新选择设备，原有认证材料先保留，后台须重新校验材料与设备是否匹配。','停止并选择',function(){stopRelay(function(){startSetup(1)})});else startSetup(1);break;
+case 'permissions':permissions();break;
+case 'account':accountDialog();break;
+case 'diagnostics':navigate('diagnostics');break;
+case 'exit-setup':if(state.pending==='import'){confirmAction('取消本次导入并返回？','未确认保存的候选记录将清理，原有认证材料保留。','取消并返回',function(){cancelPending();state.candidate=false;state.importState='cancelled';navigate(origin)})}else{state.candidate=false;navigate(origin)}break;
+case 'find':asyncOp('find',function(){$('device-choices').hidden=false;$('find-status').textContent='找到 2 台示例候选。选择之前先确认型号。';flash('示例候选已更新。')});break;
+case 'select-device':var selected=document.querySelector('[name="candidate"]:checked');if(!selected)return;state.device=selected.value;state.connection='unknown';state.lastAck=false;if(state.device==='other'){state.relay=false;state.material=false;state.grant=false;state.allowed=[];state.issue='unsupported';navigate('home');flash('设备已选择，但消息协议暂未适配。')}else{step=2;state.issue='';render();flash('设备已选择，继续准备认证材料。')}break;
+case 'import':importDialog();break;
+case 'cancel-import':cancelPending();state.importState='cancelled';state.candidate=false;state.issue='import-cancelled';render();flash('导入已取消，原有材料保留。');break;
+case 'save-candidate':asyncOp('save',function(){state.material=true;state.candidate=false;state.importState='saved';state.issue='';flash('认证材料已确认保存。')});break;
+case 'discard-candidate':state.candidate=false;state.importState='cancelled';state.issue='import-cancelled';render();flash('候选记录已清理，原有材料保留。');break;
+case 'wizard-prev':if(step>1){step--;render();focusTitle()}break;
+case 'wizard-next':if(step===2&&state.material){step=3}else if(step===3&&state.grant){step=4}render();focusTitle();break;
+case 'finish-setup':navigate('home');flash('初始化完成，可自行开启转发。');break;
+case 'delete-material':if(!state.material){flash('没有已保存材料');break;}confirmAction('删除本机认证材料？','会先停止通知转发，再删除本应用保存的认证材料。之后需要重新导入。','确认删除',function(){asyncOp('delete',function(){state.relay=false;state.material=false;state.candidate=false;state.connection='unknown';state.lastAck=false;state.confirmation=false;flash('已停止转发并删除材料。')})},true);break;
+case 'unsubscribe':confirmAction('停止系统通知订阅？','会先停止通知转发。再次接收需重新关联设备，已有认证材料保留。','停止订阅',function(){asyncOp('unsubscribe',function(){state.relay=false;state.grant=false;state.allowed=[];state.connection='unknown';flash('订阅已停止，认证材料保留。')})});break;
+case 'stop-for-diagnostic':confirmAction('停止转发并进入诊断？','停止期间不会转发新通知。诊断完成后由你手动重新开启。','停止并继续',function(){stopRelay()});break;
+case 'diag-channel':runDiagnostic('channel');break;
+case 'diag-test':runDiagnostic('test');break;
+case 'diag-vibrate':runDiagnostic('vibrate');break;
+case 'diag-enable':confirmAction('修改手表通知类别并测试？','将开启手表通知总开关与“其他应用”类别，保留其余类别。原型只模拟这一结果。','确认并执行',function(){runDiagnostic('enable')});break;
+case 'confirm-visible':state.display='confirmed';state.confirmation=false;state.diagResult='模拟结果：已记录“实际显示 / 执行”的人工确认。本原型不生成真机验收证据。';render();flash('已记录本次模拟人工确认。');break;
+case 'confirm-invisible':state.display='not_visible';state.confirmation=false;state.diagResult='模拟结果：报文已收包，但未确认显示 / 执行。请继续检查设备策略与协议，不能判定送达成功。';render();flash('已记录未显示，不扩大收包结论。');break;
+}
+}
+document.addEventListener('click',function(event){var button=event.target.closest('button');if(!button||button.disabled)return;if(button.dataset.route)navigate(button.dataset.route);else if(button.dataset.act)act(button.dataset.act);else if(button.dataset.feature){var info=featureDetails[button.dataset.feature];showDialog(info[0]+' · 开发计划','<p>'+info[1]+'</p>',[{label:'知道了',kind:'primary',run:closeDialog}]);}});
+document.addEventListener('change',function(event){if(event.target.name==='candidate')$('select-device-button').disabled=false});
+function setScenario(value){
+if($('dialog').open)closeDialog();cancelPending();state=baseline();step=1;$('device-choices').hidden=true;document.querySelectorAll('[name="candidate"]').forEach(function(el){el.checked=false});$('select-device-button').disabled=true;
+if(value==='running')state.relay=true;
+if(value==='connecting'){state.relay=true;state.connection='connecting';}
+if(value==='disconnected'){state.relay=true;state.connection='disconnected';state.lastCode=-3;state.failed=1;}
+if(value==='revoked'){state.relay=true;state.grant=false;state.allowed=[];state.lastCode=-41;}
+if(value==='empty'){state.device='';state.material=false;state.grant=false;state.allowed=[];state.received=0;state.ack=0;}
+if(value==='no-material'){state.material=false;}
+if(value==='no-sources'){state.allowed=[];}
+if(value==='account-failed'){state.material=false;state.accountFailure=true;}
+if(value==='import-cancelled'){state.issue='import-cancelled';state.importState='cancelled';}
+if(value==='import-error'){state.material=false;state.issue='import-error';state.importState='error';}
+if(value==='unsupported'){state.device='other';state.material=false;}
+if(value==='base-mode'){state.mode='base';state.grant=false;state.allowed=[];}
+route='home';navigate(value==='account-failed'?'device':'home',false);render();$('notice').hidden=true;
+}
+$('scenario').addEventListener('change',function(){setScenario(this.value);});
+$('theme').addEventListener('click',function(){var dark=document.documentElement.dataset.theme!=='dark';document.documentElement.dataset.theme=dark?'dark':'light';this.setAttribute('aria-pressed',String(dark));this.textContent=dark?'浅色':'深色';});
+$('large').addEventListener('click',function(){var large=document.documentElement.dataset.large!=='true';document.documentElement.dataset.large=String(large);this.setAttribute('aria-pressed',String(large));});
+$('simulate').addEventListener('click',function(){
+if(state.pending)return;state.received++;if(!state.relay){render();flash('收到示例系统回调；转发已停止，未发送。');return;}
+if(!state.grant){state.failed++;state.lastCode=-41;render();flash('权限阻断，未发送示例通知。');return;}
+if(!state.allowed.length){render();flash('没有获准来源，未发送示例通知。');return;}
+if(state.connection==='disconnected'){state.failed++;state.lastCode=-3;render();flash('示例连接失败，未盲目重发。');return;}
+state.sessionBusy=true;state.connection='connecting';render();var epoch=++generation;timer=setTimeout(function(){if(epoch!==generation)return;state.connection='authenticating';render();timer=setTimeout(function(){if(epoch!==generation)return;state.sessionBusy=false;state.connection='unknown';state.lastAck=true;state.ack++;state.lastCode=0;render();flash('示例报文已收包，实际显示待确认。')},600)},600);
+});
+var previewParams=new URLSearchParams(location.search);
+var initialScenario=previewParams.get('scenario')||'stopped';
+if(!Array.from($('scenario').options).some(function(o){return o.value===initialScenario}))initialScenario='stopped';
+$('scenario').value=initialScenario;setScenario(initialScenario);
+if(previewParams.get('theme')==='dark')$('theme').click();
+if(previewParams.get('large')==='1')$('large').click();
+if(previewParams.get('view')==='product')document.querySelector('.review-bar').hidden=true;
+var initialPage=previewParams.get('page');if(['home','device','notifications','setup','diagnostics'].includes(initialPage)){if(initialPage==='setup')step=Number(previewParams.get('step'))||1;navigate(initialPage,false)}
+})();
+</script>
+</body></html>

@@ -14,4 +14,7 @@ local.properties
 .env
 .env.*
 local-feedback/
+.local/
 *.log
+.playwright-cli/
+output/playwright/

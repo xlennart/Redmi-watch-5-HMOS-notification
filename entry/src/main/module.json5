@@ -34,6 +34,9 @@
     ],
     "requestPermissions": [
       {
+        "name": "ohos.permission.INTERNET"
+      },
+      {
         "name": "ohos.permission.ACCESS_BLUETOOTH",
         "reason": "$string:bluetooth_reason",
         "usedScene": {

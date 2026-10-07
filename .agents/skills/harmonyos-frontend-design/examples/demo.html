@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:,">
+  <title>Harmony Design · 交互原型</title>
+  <link rel="stylesheet" href="tokens.css">
+  <style>
+    :root {
+      --page:var(--h-color-page); --surface:var(--h-color-surface); --surface2:var(--h-color-surface-alt); --text:var(--h-color-text);
+      --muted:var(--h-color-muted); --line:var(--h-color-line); --brand:var(--h-color-action); --brand-soft:var(--h-color-action-surface);
+      --good:var(--h-color-success); --shadow:0 12px 32px #17345b12; --radius:var(--h-radius-large);
+      font-family:var(--h-font-family);
+    }
+    [data-theme="dark"] {
+      --shadow:0 12px 32px #0004;
+    }
+    *{box-sizing:border-box} body{margin:0;background:var(--page);color:var(--text)}
+    button,input,select{font:inherit} button{cursor:pointer;min-height:44px} button:disabled{cursor:wait;opacity:.65}
+    :focus-visible{outline:3px solid var(--brand);outline-offset:3px}
+    button:active:not(:disabled){filter:brightness(.93)}
+    .shell{max-width:1040px;margin:auto;padding:24px clamp(16px,4vw,40px) 56px}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:28px}
+    .brand{display:flex;align-items:center;gap:12px;font-weight:700}
+    .logo{display:grid;width:40px;height:40px;place-items:center;border-radius:14px;color:white;background:linear-gradient(145deg,#6dbaff,#1769e8)}
+    .theme{border:1px solid var(--line);border-radius:999px;padding:10px 14px;color:var(--text);background:var(--surface)}
+    .hero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(270px,.85fr);gap:20px}
+    .card{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow)}
+    .intro{padding:clamp(24px,4vw,40px);display:flex;flex-direction:column;justify-content:center}
+    .eyebrow{color:var(--brand);font-size:13px;font-weight:700;letter-spacing:.08em}
+    h1{margin:12px 0;font-size:var(--h-font-size-display);line-height:1.3;letter-spacing:-.025em}
+    p{color:var(--muted);line-height:1.65}
+    .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+    .primary,.secondary{border:0;border-radius:999px;padding:12px 18px;font-weight:650}
+    .primary{color:var(--h-color-on-action);background:var(--brand)}
+    .secondary{border:1px solid var(--line);color:var(--text);background:var(--surface)}
+    .focus-card{padding:22px;display:flex;flex-direction:column;gap:16px}
+    .focus-head{display:flex;justify-content:space-between;align-items:center}
+    .pill{padding:6px 10px;border-radius:999px;color:var(--good);background:color-mix(in srgb,var(--good) 12%,transparent);font-size:12px}
+    .progress{height:8px;overflow:hidden;border-radius:999px;background:var(--surface2)}
+    .progress span{display:block;width:68%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#78c5ff,var(--brand))}
+    .section-title{display:flex;justify-content:space-between;align-items:baseline;margin:36px 0 14px}
+    h2{margin:0;font-size:21px}.muted{color:var(--muted);font-size:13px}
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+    .tile{min-height:142px;padding:18px}.tile-icon{display:grid;width:42px;height:42px;place-items:center;border-radius:15px;color:var(--brand);background:var(--brand-soft);font-size:20px}
+    .tile h3{margin:14px 0 5px;font-size:16px}.tile p{margin:0;font-size:13px}
+    .controls{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .control-card{padding:20px}.control-card h3{margin:0 0 14px;font-size:16px}
+    .field{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:14px;outline-color:var(--brand);color:var(--text);background:var(--surface2)}
+    .switch-row{display:flex;justify-content:space-between;align-items:center;gap:14px}
+    .switch{width:52px;height:44px;padding:10px 4px;border:0;border-radius:999px;background:transparent;position:relative;flex:none}
+    .switch:before{content:"";position:absolute;inset:9px 0;border-radius:999px;background:var(--muted);transition:background var(--h-motion-ms-local) ease}
+    .switch:after{content:"";display:block;position:relative;width:20px;height:20px;border-radius:50%;background:var(--surface);transition:transform var(--h-motion-ms-local) ease}
+    .switch[aria-checked="true"]:before{background:var(--brand)}.switch[aria-checked="true"]:after{transform:translateX(24px)}
+    .tabs{display:flex;width:fit-content;gap:4px;padding:4px;border-radius:999px;background:var(--surface2)}
+    .tab{border:0;border-radius:999px;padding:9px 14px;color:var(--muted);background:transparent}
+    .tab[aria-pressed="true"]{color:var(--brand);background:var(--surface);box-shadow:0 2px 8px #00000010}
+    .notice{min-height:24px;margin-top:14px;color:var(--good);font-size:13px}
+    footer{margin-top:32px;color:var(--muted);font-size:12px}
+    .feedback{margin:20px 0 0;color:var(--text)}
+    dialog{max-width:420px;width:calc(100% - 32px);padding:24px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);color:var(--text)}
+    dialog::backdrop{background:var(--h-color-overlay)}
+    .form-label{display:block;margin:16px 0 8px;color:var(--muted);font-size:14px}
+    .form-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+    #save-status[data-state="failed"]{color:var(--h-color-danger)}
+    @media(max-width:680px){.shell{padding-top:16px}.hero{grid-template-columns:1fr}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:430px){.grid,.controls{grid-template-columns:1fr}.tile{min-height:116px}}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition-duration:.01ms!important}}
+  </style>
+</head>
+<body>
+  <main class="shell" id="app">
+    <header class="top"><div class="brand"><span class="logo" aria-hidden="true">和</span><span>Harmony Design</span></div><button class="theme" id="theme" type="button" aria-pressed="false">切换深色</button></header>
+    <section class="hero" aria-labelledby="welcome">
+      <div class="card intro"><span class="eyebrow">轻盈 · 连续 · 清晰</span><h1 id="welcome">让每一步，<br>都自然发生。</h1><p>一个面向日常任务的鸿蒙风格原型示例。清晰的层级、柔和的空间感，以及及时而真实的交互反馈。</p><div class="actions"><button class="primary" id="continue" type="button">继续探索</button><button class="secondary" id="learn" type="button">了解设计原则</button></div></div>
+      <article class="card focus-card" aria-label="今日专注进度"><div class="focus-head"><strong>今日专注</strong><span class="pill">进行中</span></div><div><div style="display:flex;justify-content:space-between;margin-bottom:10px"><span class="muted">完成目标</span><strong>68%</strong></div><div class="progress" role="progressbar" aria-label="完成目标" aria-valuemin="0" aria-valuemax="100" aria-valuenow="68"><span></span></div></div><p>保持轻快节奏，给重要的事留出空间。</p><button class="secondary" id="progress" type="button">查看进度</button></article>
+    </section>
+    <div class="section-title"><h2>常用服务</h2><span class="muted">为你整理</span></div>
+    <section class="grid" aria-label="常用服务">
+      <article class="card tile"><span class="tile-icon" aria-hidden="true">◷</span><h3>日程</h3><p>安排今天的计划</p></article>
+      <article class="card tile"><span class="tile-icon" aria-hidden="true">⌕</span><h3>发现</h3><p>继续探索新内容</p></article>
+      <article class="card tile"><span class="tile-icon" aria-hidden="true">♡</span><h3>收藏</h3><p>回到保存的灵感</p></article>
+    </section>
+    <div class="section-title"><h2>交互示例</h2><span class="muted">试试下方控件</span></div>
+    <section class="controls">
+      <div class="card control-card"><h3>搜索</h3><label class="muted" for="search">查找服务或内容</label><input class="field" id="search" placeholder="输入关键词…" autocomplete="off"><div class="notice" id="search-result" aria-live="polite"></div></div>
+      <div class="card control-card"><h3>偏好设置</h3><div class="switch-row"><div><strong>每日提醒</strong><div class="muted">在合适的时间提醒我</div></div><button class="switch" id="reminder" role="switch" aria-checked="false" aria-label="每日提醒"></button></div><div class="notice" id="switch-result" aria-live="polite"></div></div>
+        <div class="card control-card"><h3>内容周期</h3><div class="tabs" role="group" aria-label="选择内容周期"><button class="tab" type="button" aria-pressed="true">日</button><button class="tab" type="button" aria-pressed="false">周</button><button class="tab" type="button" aria-pressed="false">月</button></div><div class="notice" id="tab-result" aria-live="polite">当前显示：日</div></div>
+      <div class="card control-card"><h3>状态反馈</h3><p style="margin:0">本地模拟保存：可体验等待、成功、失败和重试。不会向服务发送数据。</p><form id="save-form"><label class="form-label" for="plan">计划名称</label><input class="field" id="plan" value="整理今天的灵感" required maxlength="80"><label class="form-label" for="outcome">模拟结果</label><select class="field" id="outcome"><option value="success">成功</option><option value="failure">失败</option></select><div class="form-actions"><button class="primary" id="save" type="submit">模拟保存</button></div><div class="notice" id="save-status" role="status" data-state="idle" aria-live="polite">等待操作</div></form></div>
+    </section>
+    <p class="feedback" id="feedback" role="status" aria-live="polite"></p>
+    <dialog id="principles" aria-labelledby="principles-title"><h2 id="principles-title">把重要的事看清楚</h2><p>先建立信息层级，再用一致的色彩、间距和控件表达操作。让状态反馈跟随真实结果，保持窄窗和宽窗下的任务连续。</p><form method="dialog"><button class="primary" type="submit">知道了</button></form></dialog>
+    <footer>交互式 HTML 原型 · HarmonyOS-inspired · 可调整的项目默认风格</footer>
+  </main>
+  <script>
+    const app=document.documentElement, theme=document.getElementById('theme');
+    theme.addEventListener('click',()=>{const dark=app.dataset.theme!=='dark';app.dataset.theme=dark?'dark':'light';theme.setAttribute('aria-pressed',String(dark));theme.textContent=dark?'切换浅色':'切换深色'});
+    document.getElementById('continue').addEventListener('click',()=>document.getElementById('search').focus());
+    document.getElementById('learn').addEventListener('click',()=>document.getElementById('principles').showModal());
+    document.getElementById('progress').addEventListener('click',()=>document.getElementById('feedback').textContent='今日目标已完成 68%。');
+    const search=document.getElementById('search');
+    search.addEventListener('input',()=>{const q=search.value.trim().toLowerCase();const tiles=[...document.querySelectorAll('.tile')];let count=0;tiles.forEach(tile=>{const match=tile.textContent.toLowerCase().includes(q);tile.hidden=Boolean(q)&&!match;if(match)count++});document.getElementById('search-result').textContent=q?'找到 '+count+' 项服务':''});
+    const reminder=document.getElementById('reminder');
+    reminder.addEventListener('click',()=>{const on=reminder.getAttribute('aria-checked')!=='true';reminder.setAttribute('aria-checked',String(on));document.getElementById('switch-result').textContent=on?'每日提醒已开启':'每日提醒已关闭'});
+    document.querySelectorAll('.tab').forEach(tab=>tab.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(item=>item.setAttribute('aria-pressed',String(item===tab)));document.getElementById('tab-result').textContent='当前显示：'+tab.textContent}));
+    const saveForm=document.getElementById('save-form'), saveButton=document.getElementById('save'), saveStatus=document.getElementById('save-status');
+    saveForm.addEventListener('submit',async(event)=>{
+      event.preventDefault(); if(saveStatus.dataset.state==='pending')return;
+      const name=document.getElementById('plan').value.trim();
+      if(!name){saveStatus.dataset.state='failed';saveStatus.textContent='请输入计划名称';document.getElementById('plan').focus();return;}
+      const result=document.getElementById('outcome').value;
+      saveStatus.dataset.state='pending';saveStatus.textContent='模拟保存中…';saveButton.disabled=true;saveButton.textContent='等待结果…';
+      document.getElementById('plan').disabled=true;document.getElementById('outcome').disabled=true;
+      try{
+        await new Promise((resolve,reject)=>setTimeout(()=>result==='failure'?reject(new Error('模拟失败')):resolve(),650));
+        saveStatus.dataset.state='confirmed';saveStatus.textContent='模拟完成：'+name;saveButton.textContent='再次模拟';
+      }catch(error){saveStatus.dataset.state='failed';saveStatus.textContent='模拟失败，内容已保留；可以选择成功后重试。';saveButton.textContent='重试';}
+      finally{saveButton.disabled=false;document.getElementById('plan').disabled=false;document.getElementById('outcome').disabled=false;}
+    });
+  </script>
+</body>
+</html>

@@ -7,6 +7,7 @@ export function configuration(mode) {
   const manifest = JSON.parse(readFileSync(`${root}config/module.base.json`, 'utf8'));
   if (mode === 'notifications') {
     manifest.module.requestPermissions.push({ name: 'ohos.permission.SUBSCRIBE_NOTIFICATION' });
+    manifest.module.requestPermissions.push({ name: 'ohos.permission.GET_BUNDLE_INFO' });
     manifest.module.extensionAbilities = [{
       name: 'NotificationSubscriberExtAbility',
       srcEntry: './ets/extensionability/NotificationSubscriberExtAbility.ets',

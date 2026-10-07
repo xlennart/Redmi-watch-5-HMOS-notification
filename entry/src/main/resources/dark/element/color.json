@@ -2,55 +2,55 @@
   "color": [
     {
       "name": "start_window_background",
-      "value": "#F4F7F5"
+      "value": "#111B1E"
     },
     {
       "name": "wrist_page",
-      "value": "#F4F7F5"
+      "value": "#111B1E"
     },
     {
       "name": "wrist_surface",
-      "value": "#FFFFFF"
+      "value": "#1C2A2E"
     },
     {
       "name": "wrist_alt",
-      "value": "#EDF3F0"
+      "value": "#26373B"
     },
     {
       "name": "wrist_text",
-      "value": "#172F35"
+      "value": "#F0F6F3"
     },
     {
       "name": "wrist_muted",
-      "value": "#566970"
+      "value": "#B2C6C4"
     },
     {
       "name": "wrist_action",
-      "value": "#066B75"
+      "value": "#80D9D6"
     },
     {
       "name": "wrist_on_action",
-      "value": "#FFFFFF"
+      "value": "#092D32"
     },
     {
       "name": "wrist_action_surface",
-      "value": "#E1F2EF"
+      "value": "#243F41"
     },
     {
       "name": "wrist_warning",
-      "value": "#82500E"
+      "value": "#F4C779"
     },
     {
       "name": "wrist_warning_surface",
-      "value": "#FFF1DB"
+      "value": "#463720"
     },
     {
       "name": "wrist_danger",
-      "value": "#AA352B"
+      "value": "#FFB2A6"
     },
     {
       "name": "wrist_divider",
-      "value": "#D9E4DF"
+      "value": "#42585A"
     }
   ]
 }

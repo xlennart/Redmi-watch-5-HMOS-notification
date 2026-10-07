@@ -4,10 +4,11 @@ import assert from 'node:assert/strict';
 import JSON5 from 'json5';
 import { configuration } from './configure-probe.mjs';
 
-const root = fileURLToPath(new URL('../', import.meta.url));
+// Use one separator for both filesystem paths and map keys on Windows and POSIX.
+const root = fileURLToPath(new URL('../', import.meta.url)).replaceAll('\\', '/');
 function walk(path) {
   return readdirSync(path, { withFileTypes: true }).flatMap(item => {
-    if (['.git', 'node_modules', '.cloud-build', '.hvigor', 'oh_modules', 'build'].includes(item.name)) return [];
+    if (['.git', '.local', 'local-feedback', 'node_modules', '.cloud-build', '.hvigor', 'oh_modules', 'build'].includes(item.name)) return [];
     return item.isDirectory() ? walk(`${path}/${item.name}`) : [`${path}/${item.name}`];
   });
 }
@@ -22,7 +23,8 @@ const modeSource = readFileSync(`${root}entry/src/main/ets/config/ProbeMode.ets`
 const enabled = modeSource.includes('= true;');
 const expected = configuration(enabled ? 'notifications' : 'baseline');
 assert.deepEqual(module, JSON.parse(expected.manifest).module, 'Manifest must match selected mode');
-assert.equal(modeSource, expected.modeSource, 'Mode flag must match generated configuration');
+assert.equal(modeSource.replaceAll('\r\n', '\n'), expected.modeSource,
+  'Mode flag must match generated configuration');
 for (const ability of [...module.abilities, ...(module.extensionAbilities ?? [])]) {
   assert.ok(existsSync(`${root}entry/src/main/${ability.srcEntry}`), `Missing ${ability.srcEntry}`);
 }
