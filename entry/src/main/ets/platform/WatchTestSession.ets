@@ -39,6 +39,7 @@ function fixedTestNotification(): Uint8Array {
 // One explicit, foreground-only test. Every operation has a deadline; closing destroys session keys.
 export class WatchTestSession {
   iconStatus: NotificationIconStatus = 'notRequested';
+  iconReason: string = '';
   private id: number = -1;
   private closed: boolean = false;
   private v2: boolean = false;
@@ -268,18 +269,23 @@ export class WatchTestSession {
           try { await icon.handle(subtype, fieldBytes(fields, 9)); }
           catch (_) { icon.status = 'failed'; }
           this.iconStatus = icon.status;
+          this.iconReason = icon.reason;
           if (this.failure) throw this.failure;
           if (this.closed) throw new WatchChannelError('通知会话已取消', -21);
-          summary = icon.status === 'uploaded' ? '图标分片已收包，图标显示待验证' :
+          summary = icon.status === 'uploaded' ? '图标分片已收包，图标显示待验证' : icon.status === 'cached' ? '手表报告图标已缓存，实际显示待验证' :
             (icon.status === 'unavailable' || icon.status === 'unsupported' || icon.status === 'failed' ? '图标不可用，保留默认图标' : '正在响应手表图标请求');
           progress(`认证及加密通道通过；${settings}。${summary}。`);
-          if (icon.status !== 'notRequested' && duration < 20000) break;
+          if (icon.status !== 'notRequested' && icon.status !== 'pending' && duration < 20000) break;
           continue;
         }
         if (type === 7) summary = subtype === 16 || subtype === 15 ? `手表请求通知图标（7/${subtype}）` :
           `通知应用回应 7/${subtype}，状态 ${status < 0 ? '未报告' : status}`;
         progress(`认证及加密通道通过；${settings}。${summary}；保持连接中，请查看手表。`);
       } finally { clearProto(fields); }
+    }
+    if (icon) {
+      if (icon.status === 'pending') { icon.status = 'failed'; icon.reason = 'prepare_timeout'; }
+      this.iconStatus = icon.status; this.iconReason = icon.reason;
     }
     progress(`认证及加密通道通过；${settings}。${summary}；测试会话已关闭，显示结果待确认。`);
   }
@@ -364,11 +370,17 @@ export class WatchTestSession {
       }
       stage = '验证加密通知通道'; progress('密钥认证通过，正在读取通知配置以验证加密通道…');
       const settings = await this.checkNotificationSettings();
+      const iconSource = notification ? notification.packageName : utf8('com.xlennart.wristnotifications');
+      const icon = iconProvider ? this.iconExchange(iconSource, iconProvider) : undefined;
+      // Announce the current authorized source even when the watch does not repeat a cached icon query.
+      if (icon) {
+        try { await icon.request(); }
+        catch (_) { icon.status = 'failed'; icon.reason = 'prepare_send'; }
+        this.iconStatus = icon.status; this.iconReason = icon.reason;
+      }
       stage = '发送固定测试提醒'; progress('密钥认证通过，正在发送固定测试提醒…');
       const sequence = await this.sendCommand(notification ? watchNotificationCommand(notification) : fixedTestNotification(), true);
       const ack = await this.nextFrame(1, '等待手表确认测试数据', sequence); ack.payload.fill(0);
-      const iconSource = notification ? notification.packageName : utf8('com.xlennart.wristnotifications');
-      const icon = iconProvider ? this.iconExchange(iconSource, iconProvider) : undefined;
       if (notification) {
         // Process late icon queries instead of closing after a blind one-second delay.
         await this.observeTestResponses(progress, settings, icon, icon ? 4000 : 1000);

@@ -1,5 +1,7 @@
 # 原生界面接入记录
 
+当前界面与使用流程以[通知功能界面与使用流程](notification-focused.zh-CN.md)为准。以下保留首轮接入记录；三页导航已经撤下。
+
 2026-10-07 将独立设计成果接入主工程，使用现有 ArkUI V1、API 26 与手机本地签名。目录中 design-baseline、design-tokens、viewmodel-contract 文件保留设计交付时的原文；其中“尚未接入”的说明属于设计阶段，实际接入以本文件与源码为准。
 
 ## 页面与服务边界

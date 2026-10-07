@@ -3,7 +3,7 @@ import { util } from '@kit.ArkTS';
 
 export class RelayConfig { enabled: boolean = false; deviceId: string = ''; }
 class RelayActivity { active: boolean = false; }
-export class RelayStats { acknowledged: number = 0; failed: number = 0; dropped: number = 0; lastCode: number = 0; lastIconStatus: string = 'notRequested'; }
+export class RelayStats { acknowledged: number = 0; failed: number = 0; dropped: number = 0; lastCode: number = 0; lastIconStatus: string = 'notRequested'; lastIconReason: string = ''; }
 export class RelayStore {
   private directory: string;
   constructor(filesDir: string) { this.directory = filesDir; }
@@ -21,7 +21,8 @@ export class RelayStore {
       const result = new RelayStats();
       result.acknowledged = this.count(parsed.acknowledged); result.failed = this.count(parsed.failed); result.dropped = this.count(parsed.dropped);
       result.lastCode = Number.isSafeInteger(parsed.lastCode) ? parsed.lastCode : 0;
-      if (['notRequested', 'uploaded', 'unavailable', 'unsupported', 'failed'].includes(parsed.lastIconStatus)) result.lastIconStatus = parsed.lastIconStatus;
+      if (['notRequested', 'pending', 'cached', 'uploaded', 'unavailable', 'unsupported', 'failed'].includes(parsed.lastIconStatus)) result.lastIconStatus = parsed.lastIconStatus;
+      if (typeof parsed.lastIconReason === 'string' && /^[a-z0-9_-]{0,80}$/.test(parsed.lastIconReason)) result.lastIconReason = parsed.lastIconReason;
       return result;
     } catch (_) { return new RelayStats(); }
   }

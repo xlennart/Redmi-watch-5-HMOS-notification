@@ -9,7 +9,6 @@ import { MI_LOGIN_USER_AGENT } from '../platform/MiFitnessAccount';
 @Component
 struct Index {
   @State private view: AppState = new AppState();
-  @State private availableWidth: number = 0;
   private model: AppViewModel | undefined = undefined;
   private loginController: webview.WebviewController = new webview.WebviewController();
   private pageScroller: Scroller = new Scroller();
@@ -30,7 +29,7 @@ struct Index {
     if (this.view.loginVisible) { this.send(AppCommand.CLOSE_LOGIN); return true; }
     if (this.view.route === 'home') return false;
     if (this.view.route === 'setup') this.send(AppCommand.EXIT_SETUP);
-    else if (this.view.route === 'diagnostics') this.send(AppCommand.DEVICE);
+    else if (this.view.route === 'diagnostics') this.send(AppCommand.HOME);
     else this.send(AppCommand.HOME);
     return true;
   }
@@ -52,7 +51,7 @@ struct Index {
     return this.view.hasDevice ? this.view.deviceName : '还没有选择手表';
   }
   private relayTitle(): string {
-    if (!this.view.relayEnabled) return '通知转发已停止';
+    if (!this.view.relayEnabled) return '通知转发已关闭';
     if (!this.view.permissionKnown) return '转发已开启 · 授权待检查';
     if (!this.view.permission) return '转发已开启 · 权限阻断';
     if (this.view.connection === 'disconnected') return '转发已开启 · 等待恢复';
@@ -62,17 +61,18 @@ struct Index {
     if (!this.view.notificationMode) return '当前构建未启用通知订阅，需要通知模式构建。';
     if (!this.view.hasDevice) return '先选择已配对设备并完成初始化。';
     if (!this.view.supported) return '候选已识别，消息协议暂未适配。';
-    if (!this.view.permissionKnown) return '请刷新系统授权状态；过去的授权记录不能代表当前权限。';
-    if (!this.view.permission) return '授权恢复前，新通知无法转发。转发意图与权限状态分别保留。';
-    return this.view.relayEnabled ? '新通知到来时连接和认证。当前不保证常驻在线。' :
+    if (!this.view.permissionKnown) return '请检查系统通知授权。';
+    if (!this.view.permission) return '需要恢复系统授权才能继续转发。';
+    return this.view.relayEnabled ? '等待已授权应用的新通知。' :
       '开启后，只转发系统授权应用的新通知。';
   }
   private relayLabel(): string {
-    if (this.view.pendingKind === 'start') return '正在检查前置条件…';
+    if (this.view.pendingKind === 'start') return '正在开启…';
     if (this.view.pendingKind === 'stop') return '正在停止…';
     if (this.view.relayEnabled) return '停止通知转发';
     if (!this.view.hasDevice) return '开始初始化';
-    if (!this.view.material) return '准备认证材料';
+    if (!this.view.supported) return '重新选择手表';
+    if (!this.view.material) return '继续设置';
     if (!this.view.permissionKnown) return '检查系统授权';
     if (!this.view.permission) return '允许系统通知';
     return '开启通知转发';
@@ -81,7 +81,7 @@ struct Index {
     if (this.view.connection === 'connecting') return '消息通道正在连接';
     if (this.view.connection === 'authenticating') return '消息通道正在认证';
     if (this.view.connection === 'disconnected') return '最近消息通道连接失败';
-    return this.view.sessionBusy ? '通知转发会话正在处理' : '消息通道按需连接，本次状态未知';
+    return this.view.sessionBusy ? '正在处理新通知' : '新通知到来时连接手表';
   }
   private issueTitle(): string {
     if (!this.view.notificationMode) return '当前构建不支持通知订阅';
@@ -128,22 +128,10 @@ struct Index {
     if (this.view.iconStatus === 'notRequested') return '尚未收到手表图标请求';
     return '来源图标不可用或上传未完成，保留默认图标';
   }
-  private feature(title: string, message: string): void {
-    this.getUIContext().showAlertDialog({ title: title, message: message,
-      confirm: { value: '知道了', action: () => {} } });
-  }
-  private goMaterial(): void {
-    this.send(AppCommand.SETUP);
-    if (this.view.step === 4) {
-      this.send(AppCommand.PREVIOUS_STEP);
-      this.send(AppCommand.PREVIOUS_STEP);
-    } else if (this.view.step === 3) this.send(AppCommand.PREVIOUS_STEP);
-  }
-
   @Builder
   private title(title: string, subtitle: string) {
-    Column({ space: 8 }) {
-      Text(title).fontSize(this.fp(28)).fontWeight(FontWeight.Bold).fontColor(this.ink())
+    Column({ space: 4 }) {
+      Text(title).fontSize(this.fp(22)).fontWeight(FontWeight.Bold).fontColor(this.ink())
         .accessibilityLevel('yes').accessibilityText(title)
       Text(subtitle).fontSize(this.fp(14)).fontColor(this.muted()).lineHeight(this.fp(22))
     }.width('100%').alignItems(HorizontalAlign.Start).margin({ bottom: 8 })
@@ -154,7 +142,7 @@ struct Index {
       .fontColor(primary ? this.onAccent() : this.ink())
       .backgroundColor(primary ? this.accent() : this.alt())
       .constraintSize({ minHeight: 48 }).padding({ left: 18, right: 18, top: 12, bottom: 12 })
-      .width('100%').borderRadius(999).enabled(enabled)
+      .width('100%').borderRadius(12).enabled(enabled)
       .onClick(() => { this.send(command); }).accessibilityText(label)
   }
   @Builder
@@ -168,205 +156,146 @@ struct Index {
       Text(value).fontSize(this.fp(14)).fontColor(this.muted()).textAlign(TextAlign.End).layoutWeight(0.8)
     }.width('100%').padding({ top: 12, bottom: 12 })
   }
+
+  private pageTitle(): string {
+    if (this.view.route === 'device') return '设置';
+    if (this.view.route === 'setup') return '设置通知转发';
+    if (this.view.route === 'diagnostics') return '问题排查';
+    return '腕间通知';
+  }
+  private sendTest(): void {
+    if (this.view.relayEnabled || this.view.sessionBusy) {
+      this.confirm('暂停转发并测试？', '测试期间暂停新通知转发。测试结束后可点击“继续通知转发”。', AppCommand.QUICK_TEST);
+    } else this.send(AppCommand.QUICK_TEST);
+  }
+  private readyToTest(): boolean { return this.view.hasDevice && this.view.supported && this.view.material && !this.busy(); }
   @Builder
-  private homeHero() {
-    Column({ space: 16 }) {
+  private entry(label: string, value: string, command: AppCommand) {
+    Button() {
       Row({ space: 12 }) {
-        Column({ space: 8 }) {
-          Text('你的手表').fontSize(this.fp(12)).fontColor(this.accent())
-          Text(this.deviceName()).fontSize(this.fp(23)).fontWeight(FontWeight.Bold).fontColor(this.ink())
-          Text(this.view.hasDevice ? '已选择系统配对设备' : '从已有配对开始').fontSize(this.fp(14)).fontColor(this.muted())
-        }.alignItems(HorizontalAlign.Start).layoutWeight(1)
-        if (!this.view.large && this.availableWidth >= 350) {
-          Image($rawfile('watch.svg')).width(104).height(138).objectFit(ImageFit.Contain)
-            .accessibilityLevel('no')
-        }
-      }.width('100%')
-      Text(this.channelText()).fontSize(this.fp(12)).fontColor(this.accent())
-        .padding(10).backgroundColor(this.soft()).borderRadius(14).width('100%')
-      Divider().color($r('app.color.wrist_divider'))
-      Text(this.relayTitle()).fontSize(this.fp(20)).fontWeight(FontWeight.Medium).fontColor(this.ink()).width('100%')
-      Text(this.relayDescription()).fontSize(this.fp(14)).fontColor(this.muted()).lineHeight(this.fp(22)).width('100%')
-      this.action(this.relayLabel(), this.view.relayEnabled ? AppCommand.STOP_RELAY : AppCommand.START_RELAY,
-        true, this.view.relayEnabled ? this.view.pendingKind !== 'stop' :
-          !this.busy() && (!this.view.hasDevice || this.view.supported) && (!this.view.hasDevice || this.view.notificationMode))
-      this.action('刷新状态', AppCommand.REFRESH, false, !this.busy())
-      this.note(this.view.relayEnabled ? '可随时停止。已发出的帧可能已到手表。' : '停止转发时，系统通知授权仍保留。')
-    }.width('100%').padding(20).backgroundColor(this.surface()).borderRadius(24)
-      .alignItems(HorizontalAlign.Start)
-  }
-  @Builder
-  private preparation() {
-    Column({ space: 14 }) {
-      Text('转发准备').fontSize(this.fp(18)).fontWeight(FontWeight.Medium).fontColor(this.ink())
-      Column({ space: 6 }) {
-        Text('系统通知 · ' + this.permissionText()).fontSize(this.fp(16)).fontColor(this.ink())
-        Text(this.view.permission ? '已允许 ' + this.view.sourceCount + ' 个应用' : '请打开系统授权选择应用')
-          .fontSize(this.fp(14)).fontColor(this.muted())
-      }.alignItems(HorizontalAlign.Start).width('100%')
-      Divider().color($r('app.color.wrist_divider'))
-      Column({ space: 6 }) {
-        Text(this.view.material ? '认证材料已准备' : '认证材料待准备').fontSize(this.fp(16)).fontColor(this.ink())
-        Text('仅保存在手机安全存储，页面不持有密钥').fontSize(this.fp(14)).fontColor(this.muted())
-      }.alignItems(HorizontalAlign.Start).width('100%')
-      this.note(this.channelText())
-    }.width('100%').padding(20).backgroundColor(this.surface()).borderRadius(24)
-      .alignItems(HorizontalAlign.Start)
-  }
-  @Builder
-  private stats() {
-    Column({ space: 16 }) {
-      Row() {
-        Text('本机累计记录').fontSize(this.fp(18)).fontWeight(FontWeight.Medium).fontColor(this.ink()).layoutWeight(1)
-        Text('本机累计').fontSize(this.fp(12)).fontColor(this.muted())
-      }.width('100%')
-      Row({ space: 12 }) {
-        Column({ space: 6 }) {
-          Text(this.view.received.toString()).fontSize(this.fp(28)).fontWeight(FontWeight.Bold).fontColor(this.ink())
-          Text('通知回调').fontSize(this.fp(12)).fontColor(this.muted())
-        }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-        Column({ space: 6 }) {
-          Text(this.view.acknowledged.toString()).fontSize(this.fp(28)).fontWeight(FontWeight.Bold).fontColor(this.ink())
-          Text('手表收包').fontSize(this.fp(12)).fontColor(this.muted())
-        }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-        Column({ space: 6 }) {
-          Text(this.view.failed.toString()).fontSize(this.fp(28)).fontWeight(FontWeight.Bold).fontColor(this.ink())
-          Text('转发失败').fontSize(this.fp(12)).fontColor(this.muted())
-        }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-      }.width('100%')
-      this.note('收包只代表传输确认，是否显示仍需确认。只记录来源与计数，不保存正文。')
-    }.width('100%').padding(20).backgroundColor(this.surface()).borderRadius(24)
-      .alignItems(HorizontalAlign.Start)
-  }
-  @Builder
-  private futureFeatures() {
-    Column({ space: 12 }) {
-      Text('逐步完善腕间体验').fontSize(this.fp(18)).fontWeight(FontWeight.Medium).fontColor(this.ink())
-      this.note('以下扩展尚未实现，不显示虚构数据或可用操作。')
-      Button('手机音乐控制 · 尚未实现').fontSize(this.fp(15)).fontColor(this.muted())
-        .backgroundColor(this.alt()).width('100%').constraintSize({ minHeight: 48 }).borderRadius(16)
-        .onClick(() => { this.feature('手机音乐控制 · 尚未实现',
-          '媒体会话权限、目标播放器与手表双向事件待接入。手表本地音乐传输是另一项能力。'); })
-      Button('睡眠、活动与运动 · 尚未实现').fontSize(this.fp(15)).fontColor(this.muted())
-        .backgroundColor(this.alt()).width('100%').constraintSize({ minHeight: 48 }).borderRadius(16)
-        .onClick(() => { this.feature('健康数据 · 尚未实现', '目前只有数据模型与分页契约，不读取健康数据，不补零。'); })
-      Button('设备设置 · 部分能力待实现').fontSize(this.fp(15)).fontColor(this.muted())
-        .backgroundColor(this.alt()).width('100%').constraintSize({ minHeight: 48 }).borderRadius(16)
-        .onClick(() => { this.feature('设备设置', '已有通知类别诊断读写；时间、语言等设置尚未实现。'); })
-      Button('表盘与资源 · 尚未实现').fontSize(this.fp(15)).fontColor(this.muted())
-        .backgroundColor(this.alt()).width('100%').constraintSize({ minHeight: 48 }).borderRadius(16)
-        .onClick(() => { this.feature('表盘与资源 · 尚未实现', '容量、文件校验、传输、取消与安装都需要后续实现和设备验收。'); })
-    }.width('100%').padding(20).backgroundColor(this.surface()).borderRadius(24)
-      .alignItems(HorizontalAlign.Start)
+        Text(label).fontSize(16).fontColor(this.ink()).layoutWeight(1)
+        Text(value).fontSize(13).fontColor(this.muted())
+        Text('›').fontSize(22).fontColor(this.muted())
+      }.width('100%').padding({ left: 16, right: 16, top: 14, bottom: 14 })
+    }.width('100%').constraintSize({ minHeight: 52 }).borderRadius(12).backgroundColor(this.surface())
+      .enabled(!this.busy()).onClick(() => { this.send(command); }).accessibilityText(label + '，' + value)
   }
   @Builder
   private home() {
-    this.title('今日', '让需要的消息来到手腕。')
-    if (this.issueTitle().length > 0) {
-      Column({ space: 10 }) {
-        Text(this.issueTitle()).fontSize(this.fp(16)).fontWeight(FontWeight.Medium).fontColor(this.warning())
-        Text(this.issueDescription()).fontSize(this.fp(14)).fontColor(this.warning()).lineHeight(this.fp(22))
-        Button('处理这个问题').fontSize(this.fp(14)).fontColor(this.warning()).backgroundColor(Color.Transparent)
-          .constraintSize({ minHeight: 48 }).onClick(() => { this.recover(); })
-
-      }.width('100%').padding(16).backgroundColor(this.warningSurface()).borderRadius(16)
-        .alignItems(HorizontalAlign.Start)
+    Column({ space: 14 }) {
+      Text(this.deviceName()).fontSize(15).fontColor(this.muted())
+      Text(this.relayTitle()).fontSize(24).fontWeight(FontWeight.Bold).fontColor(this.ink())
+      Text(this.relayDescription()).fontSize(14).fontColor(this.muted()).lineHeight(22)
+      this.action(this.relayLabel(), this.view.relayEnabled ? AppCommand.STOP_RELAY : AppCommand.START_RELAY,
+        true, this.view.relayEnabled ? this.view.pendingKind !== 'stop' : !this.busy())
+      if (this.view.sessionBusy) { this.note('正在处理新通知…') }
+    }.width('100%').padding(20).backgroundColor(this.surface()).borderRadius(18).alignItems(HorizontalAlign.Start)
+    if (this.issueTitle().length > 0 && this.view.hasDevice) {
+      Column({ space: 8 }) {
+        Text(this.issueTitle()).fontSize(15).fontWeight(FontWeight.Medium).fontColor(this.warning())
+        Button('处理设置').fontSize(14).fontColor(this.warning()).backgroundColor(this.warningSurface())
+          .constraintSize({ minHeight: 44 }).enabled(!this.busy()).onClick(() => { this.recover(); })
+      }.padding(16).width('100%').borderRadius(14).backgroundColor(this.warningSurface()).alignItems(HorizontalAlign.Start)
     }
-    if (this.availableWidth >= 840 && !this.view.large) {
-      Row({ space: 20 }) {
-        Column({ space: 20 }) { this.homeHero() }.layoutWeight(1.2)
-        Column({ space: 20 }) { this.preparation(); this.stats() }.layoutWeight(1)
-      }.width('100%').alignItems(VerticalAlign.Top)
-    } else {
-      this.homeHero()
-      this.preparation()
-      this.stats()
+    Column({ space: 8 }) {
+      this.entry('管理系统通知授权', this.permissionText(), AppCommand.AUTHORIZE)
+      Text(this.view.permissionKnown && this.view.permission ? '已允许 ' + this.view.sourceCount + ' 个应用来源' :
+        '在系统授权页选择要转发的应用').fontSize(12).fontColor(this.muted()).padding({ left: 16 })
+    }.width('100%')
+    Button('发送测试通知').fontSize(16).fontColor(this.accent()).backgroundColor(this.soft())
+      .width('100%').constraintSize({ minHeight: 52 }).borderRadius(12).enabled(this.readyToTest())
+      .onClick(() => { this.sendTest(); })
+    this.testResult()
+    this.entry('问题排查', '', AppCommand.DIAGNOSTICS)
+  }
+  @Builder
+  private testResult() {
+    if (this.view.testState !== 'idle') {
+      Column({ space: 12 }) {
+        Text(this.view.testState === 'running' ? '正在发送测试通知…' :
+          this.view.testState === 'awaiting' ? this.view.testKind === 'vibration' ? '请确认手表是否震动' : '请查看手表通知中心' :
+          this.view.testState === 'confirmed' ? '已记录本次测试确认' :
+          this.view.testState === 'notVisible' ? '本次测试未显示或未执行' :
+          this.view.testState === 'cancelled' ? '测试已取消' : '测试未完成')
+          .fontSize(16).fontWeight(FontWeight.Medium).fontColor(this.ink())
+        if (this.view.confirmationRequired && !this.busy()) {
+          this.note(this.view.testKind === 'vibration' ? '手表是否短震两次？' : '是否看到了“腕间通知测试”？')
+          Row({ space: 12 }) {
+            Button(this.view.testKind === 'vibration' ? '震动了' : '看到了').fontColor(this.onAccent()).backgroundColor(this.accent()).layoutWeight(1)
+              .constraintSize({ minHeight: 48 }).onClick(() => { this.send(AppCommand.CONFIRM_VISIBLE); })
+            Button(this.view.testKind === 'vibration' ? '没有震动' : '没看到').fontColor(this.ink()).backgroundColor(this.alt()).layoutWeight(1)
+              .constraintSize({ minHeight: 48 }).onClick(() => { this.send(AppCommand.CONFIRM_NOT_VISIBLE); })
+          }.width('100%')
+        }
+        if (this.view.testPausedRelay && !this.view.relayEnabled) {
+          this.note('通知转发暂时关闭，请完成测试后继续转发。')
+          this.action('继续通知转发', AppCommand.START_RELAY, true, !this.busy())
+        }
+      }.padding(16).width('100%').backgroundColor(this.surface()).borderRadius(14).alignItems(HorizontalAlign.Start)
     }
-    this.futureFeatures()
   }
   @Builder
   private device() {
-    this.title('你的设备', '状态、初始化和诊断各有入口。')
-    Column({ space: 14 }) {
-      Text(this.deviceName()).fontSize(this.fp(23)).fontWeight(FontWeight.Bold).fontColor(this.ink())
-      Text(this.channelText()).fontSize(this.fp(14)).fontColor(this.accent())
-      this.row('系统配对', this.view.hasDevice ? '已选择系统配对设备' : '未选择')
-      this.row('电量', '暂未读取')
-      this.row('固件版本', '暂未读取')
-      this.action('设备初始化', AppCommand.SETUP, true, !this.busy())
-      Button('选择另一台设备').fontSize(this.fp(15)).fontColor(this.accent()).backgroundColor(this.alt())
-        .width('100%').constraintSize({ minHeight: 48 }).enabled(!this.busy()).onClick(() => {
-          if (this.view.relayEnabled) this.confirm('切换前停止转发',
-            '先停止转发，再进入初始化重新选择。原有材料保留，后台须校验与新设备是否匹配。', AppCommand.CHANGE_DEVICE);
-          else this.send(AppCommand.CHANGE_DEVICE);
+    this.title('手表与认证', '已有设置会保留，无需重复初始化。')
+    Column({ space: 4 }) {
+      this.row('当前手表', this.deviceName())
+      this.row('认证材料', this.view.material ? '已保存' : '待导入')
+      this.entry('重新选择手表', '', AppCommand.CHANGE_DEVICE)
+      this.entry('管理认证材料', this.view.material ? '已保存' : '待导入', AppCommand.MATERIAL)
+    }.width('100%').padding(12).backgroundColor(this.surface()).borderRadius(16)
+    this.entry('检查当前状态', '', AppCommand.REFRESH)
+    this.entry('问题排查', '', AppCommand.DIAGNOSTICS)
+    Column({ space: 12 }) {
+      Text('高级管理').fontSize(16).fontColor(this.ink())
+      Button('停止系统订阅').fontColor(this.muted()).backgroundColor(this.alt()).width('100%')
+        .constraintSize({ minHeight: 48 }).enabled(!this.busy()).onClick(() => {
+          this.confirm('停止系统订阅？', '会停止转发并取消订阅。再次接收通知需要重新开启，认证材料保留。', AppCommand.UNSUBSCRIBE);
         })
-    }.width('100%').padding(20).backgroundColor(this.surface()).borderRadius(24).alignItems(HorizontalAlign.Start)
-    Column({ space: 14 }) {
-      Text('认证与授权').fontSize(this.fp(18)).fontWeight(FontWeight.Medium).fontColor(this.ink())
-      this.row('本机认证材料', this.view.material ? '已准备' : '待准备')
-      Button('管理认证材料').fontSize(this.fp(15)).fontColor(this.accent()).backgroundColor(this.alt())
-        .width('100%').constraintSize({ minHeight: 48 }).onClick(() => { this.goMaterial(); })
-      this.row('系统通知授权', this.permissionText())
-      Button('管理系统授权').fontSize(this.fp(15)).fontColor(this.accent()).backgroundColor(this.alt())
-        .width('100%').constraintSize({ minHeight: 48 }).enabled(this.view.notificationMode && this.view.hasDevice && !this.busy())
-        .onClick(() => { this.authorize(); })
-      Text('账号同步 · 待验证').fontSize(this.fp(16)).fontColor(this.ink())
-      Text(this.view.accountFailed ? '网页登录完成，设备同步未完成；原有材料保留。' :
-        '可尝试登录小米账号获取设备。同步失败时，可继续使用日志导入。')
-        .fontSize(this.fp(14)).fontColor(this.muted()).lineHeight(this.fp(22))
-      Button('登录并同步设备').fontSize(this.fp(15)).fontColor(this.accent()).backgroundColor(this.alt())
-        .width('100%').constraintSize({ minHeight: 48 }).onClick(() => {
-          this.send(AppCommand.ACCOUNT_LOGIN);
+      Button('删除认证材料').fontColor(this.danger()).backgroundColor(this.alt()).width('100%')
+        .constraintSize({ minHeight: 48 }).enabled(!this.busy() && this.view.material).onClick(() => {
+          this.confirm('删除认证材料？', '会先停止转发，再删除本应用的认证材料。之后需重新导入。', AppCommand.DELETE_CREDENTIAL);
         })
-    }.width('100%').padding(20).backgroundColor(this.surface()).borderRadius(24).alignItems(HorizontalAlign.Start)
-    Column({ space: 14 }) {
-      Text('需要排查时').fontSize(this.fp(18)).fontWeight(FontWeight.Medium).fontColor(this.ink())
-      this.note('诊断与转发共用通道。运行诊断前必须停止通知转发。')
-      this.action('诊断与验证', AppCommand.DIAGNOSTICS, false, !this.busy())
-      Text('高级管理').fontSize(this.fp(16)).fontColor(this.ink())
-      Button('停止系统通知订阅').fontSize(this.fp(15)).fontColor(this.muted()).backgroundColor(this.alt())
-        .width('100%').constraintSize({ minHeight: 48 }).enabled(!this.busy())
-        .onClick(() => { this.confirm('停止系统通知订阅？',
-          '先停止转发，再停止订阅；材料保留，再次接收需重新关联。', AppCommand.UNSUBSCRIBE); })
-      Button('删除本机认证材料').fontSize(this.fp(15)).fontColor(this.danger()).backgroundColor(this.alt())
-        .width('100%').constraintSize({ minHeight: 48 }).enabled(!this.busy() && this.view.material)
-        .onClick(() => { this.confirm('删除本机认证材料？',
-          '会先停止转发，再删除本应用材料；之后需重新导入。原有设备绑定不会被改变。', AppCommand.DELETE_CREDENTIAL); })
-    }.width('100%').padding(20).backgroundColor(this.surface()).borderRadius(24).alignItems(HorizontalAlign.Start)
+    }.width('100%').padding(16).backgroundColor(this.surface()).borderRadius(16).alignItems(HorizontalAlign.Start)
   }
   @Builder
-  private notifications() {
-    this.title('通知，由你决定。', '只转发系统授予的来源。')
-    Column({ space: 14 }) {
-      Text(this.relayTitle()).fontSize(this.fp(20)).fontWeight(FontWeight.Medium).fontColor(this.ink())
-      Text(this.relayDescription()).fontSize(this.fp(14)).fontColor(this.muted()).lineHeight(this.fp(22))
-      this.action(this.relayLabel(), this.view.relayEnabled ? AppCommand.STOP_RELAY : AppCommand.START_RELAY,
-        true, this.view.relayEnabled ? this.view.pendingKind !== 'stop' :
-          !this.busy() && (!this.view.hasDevice || this.view.supported) && (!this.view.hasDevice || this.view.notificationMode))
-      this.note('停止后保留系统授权；已经发送的帧可能已到达手表。')
-    }.width('100%').padding(20).backgroundColor(this.surface()).borderRadius(24).alignItems(HorizontalAlign.Start)
-    Column({ space: 14 }) {
-      Text('系统通知授权').fontSize(this.fp(18)).fontWeight(FontWeight.Medium).fontColor(this.ink())
-      Button('管理系统通知授权').fontSize(this.fp(15)).fontColor(this.accent()).backgroundColor(this.alt())
-        .width('100%').constraintSize({ minHeight: 48 }).enabled(this.view.hasDevice && this.view.notificationMode && !this.busy())
-        .onClick(() => { this.authorize(); })
-      Text(!this.view.permissionKnown ? '当前授权状态待检查' :
-        this.view.permission ? '系统已允许 ' + this.view.sourceCount + ' 个应用来源' : '尚未取得系统通知授权')
-        .fontSize(this.fp(14)).fontColor(this.muted())
-      this.note('在系统授权页选择需要转发的应用。')
-    }.width('100%').padding(20).backgroundColor(this.surface()).borderRadius(24).alignItems(HorizontalAlign.Start)
-    Column({ space: 14 }) {
-      Text('本轮转发规则').fontSize(this.fp(18)).fontWeight(FontWeight.Medium).fontColor(this.ink())
-      this.note('同一待发通知更新会替换内容；过时积压跳过。取消移除待发条目，不保证撤销已显示提醒。')
-      this.note('消息正文仅短暂驻留内存。失败不盲目重发，ACK 不等于实际显示。')
-      this.row('免打扰时段', '尚未实现')
-      this.row('应用内筛选规则', '尚未实现')
-    }.width('100%').padding(20).backgroundColor(this.surface()).borderRadius(24).alignItems(HorizontalAlign.Start)
+  private diagnostics() {
+    Column({ space: 12 }) {
+      Text('先检查这些设置').fontSize(17).fontWeight(FontWeight.Medium).fontColor(this.ink())
+      this.note('手机蓝牙已开启，手表在附近；系统已允许需要转发的应用。')
+      this.entry('打开系统通知授权', this.permissionText(), AppCommand.AUTHORIZE)
+      Button('发送测试通知').fontColor(this.onAccent()).backgroundColor(this.accent()).width('100%')
+        .constraintSize({ minHeight: 48 }).enabled(this.readyToTest()).onClick(() => { this.sendTest(); })
+    }.width('100%').padding(16).backgroundColor(this.surface()).borderRadius(16).alignItems(HorizontalAlign.Start)
+    this.testResult()
+    Column({ space: 12 }) {
+      Text('进阶检查').fontSize(17).fontWeight(FontWeight.Medium).fontColor(this.ink())
+      if (this.view.relayEnabled || this.view.sessionBusy) {
+        this.note('进阶检查需要先停止转发。普通测试可在上方直接发送。')
+        this.action('停止通知转发', AppCommand.STOP_RELAY, false, !this.busy())
+      }
+      this.action('检查消息通道', AppCommand.CHECK_CHANNEL, false,
+        !this.view.relayEnabled && !this.view.sessionBusy && this.readyToTest())
+      this.action('测试手表震动', AppCommand.TEST_VIBRATION, false,
+        !this.view.relayEnabled && !this.view.sessionBusy && this.readyToTest())
+      Button('开启手表通知类别并测试').fontColor(this.accent()).backgroundColor(this.alt()).width('100%')
+        .constraintSize({ minHeight: 48 }).enabled(!this.view.relayEnabled && !this.view.sessionBusy && this.readyToTest())
+        .onClick(() => { this.confirm('修改手表通知设置？', '开启手表通知总开关与“其他应用”类别，保留其余类别。', AppCommand.ENABLE_CATEGORIES); })
+      Text(this.view.diagnosticResult).fontSize(13).fontColor(this.muted()).lineHeight(21)
+    }.width('100%').padding(16).backgroundColor(this.surface()).borderRadius(16).alignItems(HorizontalAlign.Start)
+    Column({ space: 8 }) {
+      Text('累计记录').fontSize(17).fontWeight(FontWeight.Medium).fontColor(this.ink())
+      this.row('手机通知回调', this.view.received.toString())
+      this.row('手表传输收包', this.view.acknowledged.toString())
+      this.row('失败 / 跳过', this.view.failed + ' / ' + this.view.dropped)
+      this.note('收包记录不能代替手表上的实际显示结果。')
+      this.row('最近错误码', this.view.lastCode.toString())
+      Text('最近转发图标：' + this.view.iconStatus + ' · ' + this.view.iconReason).fontSize(13).fontColor(this.muted())
+      Text('本次测试图标：' + this.view.diagnosticIconStatus + ' · ' + this.view.diagnosticIconReason).fontSize(13).fontColor(this.muted())
+    }.width('100%').padding(16).backgroundColor(this.surface()).borderRadius(16).alignItems(HorizontalAlign.Start)
   }
   @Builder
   private setup() {
-    this.action('返回', AppCommand.EXIT_SETUP, false, true)
-    this.title('把手表准备好。', '选择设备 → 准备认证 → 允许通知 → 完成设置')
+    this.note('选择手表 → 导入认证 → 允许通知 → 完成')
     Text('第 ' + this.view.step + ' 步 / 共 4 步').fontSize(this.fp(14)).fontColor(this.accent()).width('100%')
     Column({ space: 16 }) {
       if (this.view.step === 1) {
@@ -385,7 +314,7 @@ struct Index {
               .enabled(!this.busy()).onClick(() => { this.send(AppCommand.SELECT_DEVICE, device.reference); })
           }, (device: DeviceCandidateView) => device.reference.toString())
           if (this.view.candidates.length === 0) { this.note('没有找到候选。请确认系统已配对手环或手表，再重新查找。') }
-          this.note('选择候选不代表通道已认证或设备当前在线。')
+
         }
       } else if (this.view.step === 2) {
         Text('准备手表认证材料').fontSize(this.fp(20)).fontWeight(FontWeight.Medium).fontColor(this.ink())
@@ -394,6 +323,7 @@ struct Index {
           .fontSize(this.fp(14)).fontColor(this.muted()).lineHeight(this.fp(22))
         this.note('文件须小于 64 MB，单份日志小于 16 MB。只确认本人的设备记录。')
         this.action('从手机日志导入', AppCommand.IMPORT, true, !this.busy())
+        this.action('尝试小米账号同步', AppCommand.ACCOUNT_LOGIN, false, !this.busy())
         if (this.view.importPhase === 'reading') {
           Text('正在读取与识别…').fontSize(this.fp(14)).fontColor(this.accent())
           this.action('取消本次导入', AppCommand.CANCEL_IMPORT, false, true)
@@ -417,69 +347,21 @@ struct Index {
         this.action('上一步', AppCommand.PREVIOUS_STEP, false, !this.busy())
       } else if (this.view.step === 3) {
         Text('允许需要转发的通知').fontSize(this.fp(20)).fontWeight(FontWeight.Medium).fontColor(this.ink())
-        this.note('系统返回结果后完整刷新授权状态；取消操作不更改旧快照。')
+        this.note('在系统页面选择需要转发的应用，返回后自动更新状态。')
         this.row('通知授权', this.permissionText())
         Button('打开系统通知授权').fontSize(this.fp(15)).fontColor(this.onAccent()).backgroundColor(this.accent())
           .width('100%').constraintSize({ minHeight: 48 }).enabled(!this.busy() && this.view.notificationMode)
           .onClick(() => { this.authorize(); })
-        this.action('检查设置结果', AppCommand.NEXT_STEP, true, this.view.permission && !this.busy())
+        this.action('继续', AppCommand.NEXT_STEP, true, this.view.permissionKnown && this.view.permissionKnown && this.view.permission && !this.busy())
         this.action('上一步', AppCommand.PREVIOUS_STEP, false, !this.busy())
       } else {
         Text('准备好，按你的节奏开启。').fontSize(this.fp(20)).fontWeight(FontWeight.Medium).fontColor(this.ink())
         this.note('设备、材料与系统授权已准备。初始化完成不会自动开启转发。')
         Text(this.relayTitle()).fontSize(this.fp(16)).fontColor(this.accent())
-        this.action('完成并回首页', AppCommand.HOME, true, true)
+        this.action('开启通知转发', AppCommand.START_RELAY, true, !this.busy())
+        this.action('完成', AppCommand.HOME, false, true)
         this.action('返回授权设置', AppCommand.PREVIOUS_STEP, false, true)
       }
-    }.width('100%').padding(20).backgroundColor(this.surface()).borderRadius(24).alignItems(HorizontalAlign.Start)
-  }
-  @Builder
-  private diagnostics() {
-    this.action('返回设备', AppCommand.DEVICE, false, true)
-    this.title('诊断与验证', '技术细节集中在高级入口。')
-    if (this.view.relayEnabled || this.view.sessionBusy) {
-      Column({ space: 12 }) {
-        Text('通知转发开启，诊断暂不可用').fontSize(this.fp(16)).fontWeight(FontWeight.Medium).fontColor(this.warning())
-        Text('两者共用通道。明确停止后再执行诊断，结束后不会自动重新开启。')
-          .fontSize(this.fp(14)).fontColor(this.warning()).lineHeight(this.fp(22))
-        Button('停止转发并继续诊断').fontSize(this.fp(15)).fontColor(this.warning()).backgroundColor(this.alt())
-          .width('100%').constraintSize({ minHeight: 48 }).onClick(() => {
-            this.confirm('停止转发并进入诊断？', '停止期间不会转发新通知，诊断结束由你重新开启。', AppCommand.STOP_RELAY);
-          })
-      }.width('100%').padding(16).backgroundColor(this.warningSurface()).borderRadius(16).alignItems(HorizontalAlign.Start)
-    }
-    Column({ space: 14 }) {
-      Text('消息通道与固定测试').fontSize(this.fp(18)).fontWeight(FontWeight.Medium).fontColor(this.ink())
-      this.action('检查消息通道', AppCommand.CHECK_CHANNEL, false,
-        !this.view.relayEnabled && !this.view.sessionBusy && this.view.material && this.view.supported && !this.busy())
-      this.action('认证并发送固定测试提醒', AppCommand.TEST_NOTIFICATION, false,
-        !this.view.relayEnabled && !this.view.sessionBusy && this.view.material && this.view.supported && !this.busy())
-      this.action('测试手表震动', AppCommand.TEST_VIBRATION, false,
-        !this.view.relayEnabled && !this.view.sessionBusy && this.view.material && this.view.supported && !this.busy())
-      Button('开启手表通知类别并测试').fontSize(this.fp(15)).fontColor(this.accent()).backgroundColor(this.alt())
-        .width('100%').constraintSize({ minHeight: 48 })
-        .enabled(!this.view.relayEnabled && !this.view.sessionBusy && this.view.material && this.view.supported && !this.busy())
-        .onClick(() => { this.confirm('修改通知类别并测试？',
-          '开启手表通知总开关与“其他应用”类别，保留其余类别。这会实际修改手表通知设置。', AppCommand.ENABLE_CATEGORIES); })
-      Text(this.view.diagnosticResult).fontSize(this.fp(14)).fontColor(this.muted()).lineHeight(this.fp(22))
-        .padding(16).backgroundColor(this.alt()).borderRadius(16).width('100%')
-      if (this.view.confirmationRequired) {
-        this.action('我在表上看到了 / 已执行', AppCommand.CONFIRM_VISIBLE, true, true)
-        this.action('未看到 / 未执行', AppCommand.CONFIRM_NOT_VISIBLE, false, true)
-      }
-      this.note('人工确认只记录本次结果，不能代替其他来源或后台稳定性验收。')
-    }.width('100%').padding(20).backgroundColor(this.surface()).borderRadius(24).alignItems(HorizontalAlign.Start)
-    this.stats()
-    Column({ space: 12 }) {
-      Text('安全技术详情').fontSize(this.fp(18)).fontWeight(FontWeight.Medium).fontColor(this.ink())
-      Text('构建：' + (this.view.notificationMode ? '通知模式' : '基础模式') +
-        '\n会话：' + this.view.connection + '\n最近错误码：' + this.view.lastCode +
-        '\n跳过条目：' + this.view.dropped + '\n账号服务回退：待真机验证')
-        .fontSize(this.fp(13)).fontColor(this.muted()).lineHeight(this.fp(22))
-      this.note(this.iconText())
-      this.note('认证密钥、会话 Cookie、原始报文、日志与消息正文都不进入页面。')
-
-      this.note('截至 2026-10-07，固定提醒与“腕间测试源2”的自动转发已由用户确认显示。锁屏、后台、重连和重启仍待验收。')
     }.width('100%').padding(20).backgroundColor(this.surface()).borderRadius(24).alignItems(HorizontalAlign.Start)
   }
   @Builder
@@ -488,7 +370,7 @@ struct Index {
       Text('登录小米账号').fontSize(this.fp(23)).fontWeight(FontWeight.Bold).fontColor(this.ink())
       Text(this.view.loginNotice).fontSize(this.fp(14)).fontColor(this.muted()).lineHeight(this.fp(22))
       Row({ space: 12 }) {
-        Button('返回设备').fontColor(this.ink()).backgroundColor(this.alt())
+        Button('返回设置').fontColor(this.ink()).backgroundColor(this.alt())
           .constraintSize({ minHeight: 48 }).onClick(() => { this.send(AppCommand.CLOSE_LOGIN); })
         Button(this.busy() ? '正在同步…' : '登录后同步设备').fontColor(this.onAccent()).backgroundColor(this.accent())
           .layoutWeight(1).constraintSize({ minHeight: 48 }).enabled(!this.busy())
@@ -506,52 +388,38 @@ struct Index {
       this.note('密码与验证码在小米官方页面输入，应用不保存账号会话。')
     }.width('100%').height('100%').padding(16).backgroundColor(this.pageColor())
   }
+
   build() {
     if (this.view.loginVisible) { this.accountLogin() } else {
-    Column() {
-      Column({ space: 10 }) {
-        Row() {
-          Text('腕间通知').fontSize(this.fp(20)).fontWeight(FontWeight.Bold).fontColor(this.ink()).layoutWeight(1)
-          Text(this.view.notificationMode ? '通知模式' : '基础模式').fontSize(this.fp(12)).fontColor(this.accent()).padding(8).backgroundColor(this.soft()).borderRadius(12)
-        }.width('100%')
-      }.width('100%').padding({ left: 16, right: 16, top: 12, bottom: 12 }).backgroundColor(this.surface())
-      Scroll(this.pageScroller) {
-        Column({ space: 20 }) {
-          if (this.view.route === 'home') { this.home() }
-          else if (this.view.route === 'device') { this.device() }
-          else if (this.view.route === 'notifications') { this.notifications() }
-          else if (this.view.route === 'setup') { this.setup() }
-          else { this.diagnostics() }
-          if (this.view.notice.length > 0) {
-            Text(this.view.notice).fontSize(this.fp(14)).fontColor(this.ink()).lineHeight(this.fp(22))
-              .padding(16).width('100%').backgroundColor(this.alt()).borderRadius(16)
-              .accessibilityLevel('yes').accessibilityText(this.view.notice)
+      Column() {
+        Row({ space: 12 }) {
+          if (this.view.route !== 'home' && this.view.route !== 'notifications') {
+            Button('返回').fontSize(14).fontColor(this.accent()).backgroundColor(this.surface())
+              .constraintSize({ minHeight: 48 }).onClick(() => { this.onBackPress(); })
           }
-          if (this.busy()) {
-            Text('正在处理，请稍候…').fontSize(this.fp(14)).fontColor(this.accent())
-              .accessibilityLevel('yes').accessibilityText('正在处理')
+          Text(this.pageTitle()).fontSize(20).fontWeight(FontWeight.Bold).fontColor(this.ink()).layoutWeight(1)
+          if (this.view.route === 'home' || this.view.route === 'notifications') {
+            Button('设置').fontSize(14).fontColor(this.accent()).backgroundColor(this.surface())
+              .constraintSize({ minHeight: 48 }).enabled(!this.busy()).onClick(() => { this.send(AppCommand.DEVICE); })
           }
-          this.note('通知正文与认证材料留在本机。')
-        }.width('100%').constraintSize({ maxWidth: 1100 }).padding(16).alignItems(HorizontalAlign.Start)
-      }.width('100%').layoutWeight(1)
-      Row({ space: 6 }) {
-        Button('今日').fontSize(this.fp(14)).fontColor(this.view.route === 'home' ? this.accent() : this.muted())
-          .backgroundColor(this.view.route === 'home' ? this.soft() : this.surface()).layoutWeight(1).height(56)
-          .onClick(() => { this.send(AppCommand.HOME); }).accessibilityText('今日')
-        Button('设备').fontSize(this.fp(14)).fontColor(this.view.route === 'device' || this.view.route === 'setup' ||
-          this.view.route === 'diagnostics' ? this.accent() : this.muted())
-          .backgroundColor(this.view.route === 'device' || this.view.route === 'setup' || this.view.route === 'diagnostics' ?
-            this.soft() : this.surface()).layoutWeight(1).height(56)
-          .onClick(() => { this.send(AppCommand.DEVICE); }).accessibilityText('设备')
-        Button('通知').fontSize(this.fp(14)).fontColor(this.view.route === 'notifications' ? this.accent() : this.muted())
-          .backgroundColor(this.view.route === 'notifications' ? this.soft() : this.surface()).layoutWeight(1).height(56)
-          .onClick(() => { this.send(AppCommand.NOTIFICATIONS); }).accessibilityText('通知')
-      }.width('100%').padding({ left: 12, right: 12, top: 8, bottom: 12 }).backgroundColor(this.surface())
-    }.width('100%').height('100%').backgroundColor(this.pageColor())
-      .onAreaChange((_oldArea: Area, newArea: Area) => {
-        const width = Number(newArea.width);
-        if (this.availableWidth !== width) this.availableWidth = width;
-      })
+        }.width('100%').padding({ left: 12, right: 12, top: 4, bottom: 4 }).backgroundColor(this.surface())
+        Scroll(this.pageScroller) {
+          Column({ space: 16 }) {
+            if (this.view.route === 'home' || this.view.route === 'notifications') { this.home() }
+            else if (this.view.route === 'device') { this.device() }
+            else if (this.view.route === 'setup') { this.setup() }
+            else { this.diagnostics() }
+            if (this.view.notice.length > 0 && this.view.testState !== 'running') {
+              Text(this.view.notice).fontSize(13).fontColor(this.view.noticeFailed ? this.danger() : this.muted())
+                .lineHeight(21).padding(12).width('100%').backgroundColor(this.alt()).borderRadius(12)
+                .accessibilityText(this.view.notice)
+            }
+            if (this.busy() && this.view.testState !== 'running') {
+              Text('正在处理…').fontSize(13).fontColor(this.accent()).accessibilityText('正在处理')
+            }
+          }.width('100%').constraintSize({ maxWidth: 600 }).padding(16).alignItems(HorizontalAlign.Start)
+        }.width('100%').layoutWeight(1)
+      }.width('100%').height('100%').backgroundColor(this.pageColor())
     }
   }
 }

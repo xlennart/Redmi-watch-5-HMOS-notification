@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { NotificationIconExchange, encodeWatchIcon, iconCrc32, iconMassPayload, iconMassChunk } from '../.cloud-build/out/WatchIcon.js';
+import { NotificationIconExchange, encodeWatchIcon, iconCrc32, iconMassPayload, iconMassChunk, validateIconData } from '../.cloud-build/out/WatchIcon.js';
 import { protoBytes, protoInt, joinBytes, readProto, fieldInt, fieldBytes } from '../.cloud-build/out/WatchProtocol.js';
 
 const name = Buffer.from('example.notification.source');
@@ -21,7 +21,7 @@ function fixture(replyOptions = {}) {
     async sendChunk(bytes) { chunks.push(bytes.slice()); if (replyOptions.rejectChunk) throw new Error('NACK'); }
   };
   const exchange = new NotificationIconExchange(name, { async load() { calls++; return pixels; } }, transport);
-  return { exchange, commands, chunks, pixels, calls: () => calls };
+  return { exchange, commands, chunks, pixels, transport, calls: () => calls };
 }
 
 test('known pixels use negotiated RGB565 endianness and alpha-bearing channel layouts', () => {
@@ -95,10 +95,53 @@ test('unsolicited, foreign or ambiguous short package requests never resolve an 
 });
 
 test('unsupported image format, dimensions and compression keep the text-only path', async () => {
-  for (const response of [ready(129), ready(2, 6), ready(2, 3, 1)]) {
+  for (const response of [ready(129), ready(2, 12), ready(2, 3, 1)]) {
     const f = fixture(); await f.exchange.handle(16, query()); await f.exchange.handle(15, response);
     assert.equal(f.exchange.status, 'unsupported'); assert.equal(f.calls(), 0); assert.equal(f.chunks.length, 0);
   }
+});
+
+test('proactive prepare works without a repeated watch query and honors the icon-specific slice', async () => {
+  const f = fixture();
+  await f.exchange.request(); await f.exchange.request();
+  assert.equal(f.commands.length, 1); assert.equal(f.exchange.status, 'pending');
+  await f.exchange.handle(15, protoBytes(15, joinBytes([protoInt(1, 0), protoInt(2, 3), protoInt(3, 2), protoInt(5, 64)])));
+  assert.equal(f.exchange.status, 'uploaded'); assert.equal(f.exchange.reason, 'transport_ack');
+  assert.equal(f.commands.length, 1); // The ready response already negotiated the upload; no MASS prepare.
+  assert.ok(f.chunks.length > 0);
+});
+
+test('watch cached response and a concrete provider failure stay distinct from visible success', async () => {
+  const f = fixture(); await f.exchange.request();
+  await f.exchange.handle(15, protoBytes(15, protoInt(1, 2)));
+  assert.equal(f.exchange.status, 'cached'); assert.equal(f.exchange.reason, 'watch_cached'); assert.equal(f.calls(), 0);
+  const exchange = new NotificationIconExchange(name, { reason: 'media_9001002', async load() { return undefined; } }, {
+    async sendCommand() {}, async massReply() { throw new Error('unexpected'); },
+    async sendChunk() { throw new Error('unexpected'); }, async md5() { throw new Error('unexpected'); }
+  });
+  await exchange.request(); await exchange.handle(15, ready());
+  assert.equal(exchange.status, 'unavailable'); assert.equal(exchange.reason, 'media_9001002');
+});
+
+test('encoded PNG icons accept bounded dimensions and reject malformed or oversized input', () => {
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLttAAAAABJRU5ErkJggg==', 'base64');
+  validateIconData(png, 2, 6);
+  assert.throws(() => validateIconData(new Uint8Array(33), 2, 6), /ICON_PNG/);
+  const oversized = png.slice(); oversized.writeUInt32BE(3, 16);
+  assert.throws(() => validateIconData(oversized, 2, 6), /ICON_PNG_SIZE/);
+  assert.throws(() => validateIconData(new Uint8Array(65537), 2, 6), /ICON_LENGTH/);
+});
+
+test('PNG negotiation uploads the encoded file length rather than a raw-pixel length', async () => {
+  const f = fixture();
+  const bytes = new Uint8Array(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLttAAAAABJRU5ErkJggg==', 'base64'));
+  const length = bytes.length;
+  const exchange = new NotificationIconExchange(name, { async load() { return bytes; } }, f.transport);
+  await exchange.request(); await exchange.handle(15, ready(2, 6));
+  assert.equal(exchange.status, 'uploaded');
+  const request = readProto(fieldBytes(readProto(fieldBytes(readProto(f.commands[1]), 24)), 1));
+  assert.equal(fieldInt(request, 3), length);
+  assert.ok(bytes.every(value => value === 0));
 });
 
 test('missing icon resources fall back without starting a mass transfer', async () => {

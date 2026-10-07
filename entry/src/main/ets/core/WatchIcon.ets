@@ -1,7 +1,7 @@
 import { joinBytes, protoBytes, protoInt, readProto, fieldBytes, fieldInt, clearProto, equalBytes } from './WatchProtocol';
 
-export type NotificationIconStatus = 'notRequested' | 'uploaded' | 'unavailable' | 'unsupported' | 'failed';
-export interface NotificationIconProvider { load(side: number, format: number): Promise<Uint8Array | undefined>; }
+export type NotificationIconStatus = 'notRequested' | 'pending' | 'cached' | 'uploaded' | 'unavailable' | 'unsupported' | 'failed';
+export interface NotificationIconProvider { reason?: string; load(side: number, format: number): Promise<Uint8Array | undefined>; }
 export interface NotificationIconTransport {
   sendCommand: (command: Uint8Array) => Promise<void>;
   massReply: (timeoutMs: number) => Promise<Uint8Array>;
@@ -18,6 +18,20 @@ export function iconBytesPerPixel(format: number): number {
 }
 export function validateIconSize(side: number): void {
   if (!Number.isInteger(side) || side < 1 || side > 128) throw new Error('ICON_SIZE');
+}
+export function validateIconData(bytes: Uint8Array, side: number, format: number): void {
+  validateIconSize(side);
+  if (bytes.length < 1 || bytes.length > 65536) throw new Error('ICON_LENGTH');
+  if (format !== 6) {
+    if (bytes.length !== side * side * iconBytesPerPixel(format)) throw new Error('ICON_LENGTH');
+    return;
+  }
+  const signature = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+  if (bytes.length < 33 || !equalBytes(bytes.subarray(0, 8), signature) ||
+    !equalBytes(bytes.subarray(12, 16), new Uint8Array([73, 72, 68, 82]))) throw new Error('ICON_PNG');
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const width = view.getUint32(16); const height = view.getUint32(20);
+  if (width < 1 || height < 1 || width > side || height > side) throw new Error('ICON_PNG_SIZE');
 }
 // PositionArea is BGRA. Preserve aspect ratio in a transparent square; unpremultiply alpha once.
 export function encodeWatchIcon(bgra: Uint8Array, width: number, height: number, side: number,
@@ -92,6 +106,7 @@ export function iconMassChunk(payload: Uint8Array, sliceLength: number, index: n
 // One current source per short-lived session; never resolve arbitrary packages supplied by the watch.
 export class NotificationIconExchange {
   status: NotificationIconStatus = 'notRequested';
+  reason: string = '';
   private requested: boolean = false;
   private answered: boolean = false;
   private source: Uint8Array;
@@ -99,6 +114,11 @@ export class NotificationIconExchange {
   private transport: NotificationIconTransport;
   constructor(source: Uint8Array, provider: NotificationIconProvider, transport: NotificationIconTransport) {
     this.source = source; this.provider = provider; this.transport = transport;
+  }
+  async request(): Promise<void> {
+    if (this.requested) return;
+    this.requested = true; this.status = 'pending'; this.reason = 'prepare';
+    await this.transport.sendCommand(iconPrepareCommand(this.source));
   }
   async handle(subtype: number, notification: Uint8Array): Promise<boolean> {
     if (subtype !== 15 && subtype !== 16) return false;
@@ -112,6 +132,7 @@ export class NotificationIconExchange {
           if (name.length < Math.min(8, this.source.length) || name.length > this.source.length ||
             !equalBytes(name, this.source.subarray(0, name.length))) return true;
           this.requested = true;
+          this.status = 'pending'; this.reason = 'prepare';
           await this.transport.sendCommand(iconPrepareCommand(name));
         } finally { clearProto(query); }
         return true;
@@ -120,32 +141,40 @@ export class NotificationIconExchange {
       this.answered = true;
       const response = readProto(fieldBytes(fields, 15));
       try {
-        if (fieldInt(response, 1) !== 0) { this.status = 'unsupported'; return true; }
+        if (fieldInt(response, 1) === 2) { this.status = 'cached'; this.reason = 'watch_cached'; return true; }
+        if (fieldInt(response, 1) !== 0) { this.status = 'unsupported'; this.reason = 'prepare_status_' + fieldInt(response, 1); return true; }
         const side = fieldInt(response, 3); const format = fieldInt(response, 2); const compression = fieldInt(response, 4);
-        try { validateIconSize(side); iconBytesPerPixel(format); }
-        catch (_) { this.status = 'unsupported'; return true; }
-        if (compression > 0) { this.status = 'unsupported'; return true; }
+        try { validateIconSize(side); if (format !== 6) iconBytesPerPixel(format); }
+        catch (_) { this.status = 'unsupported'; this.reason = 'format_' + format + '_size_' + side; return true; }
+        if (compression > 0) { this.status = 'unsupported'; this.reason = 'compression_' + compression; return true; }
         let bytes: Uint8Array = new Uint8Array(); let digest: Uint8Array = new Uint8Array(); let payload: Uint8Array = new Uint8Array();
         let started = false; let finished = false;
         const until = Date.now() + 8000;
         try {
           const loaded = await this.provider.load(side, format);
-          if (!loaded) { this.status = 'unavailable'; return true; }
+          if (!loaded) { this.status = 'unavailable'; this.reason = this.provider.reason || 'resource'; return true; }
           bytes = loaded;
-          if (bytes.length !== side * side * iconBytesPerPixel(format)) throw new Error('ICON_LENGTH');
+          validateIconData(bytes, side, format);
           digest = await this.transport.md5(bytes);
-          started = true; await this.transport.sendCommand(iconMassPrepareCommand(digest, bytes.length));
-          const reply = await this.transport.massReply(Math.max(1, until - Date.now()));
-          const mass = readProto(reply);
-          let sliceLength = 2048;
-          try {
+          this.reason = 'mass_prepare';
+          let sliceLength = fieldInt(response, 5);
+          if (sliceLength < 0) {
+            started = true; await this.transport.sendCommand(iconMassPrepareCommand(digest, bytes.length));
+            const reply = await this.transport.massReply(Math.max(1, until - Date.now()));
+            const mass = readProto(reply);
+            sliceLength = 2048;
+            try {
             if (!equalBytes(fieldBytes(mass, 1), digest) || fieldInt(mass, 2) !== 0 ||
               fieldInt(mass, 3) > 0 || fieldInt(mass, 4) > 0) throw new Error('ICON_MASS_RESPONSE');
             // Fresh uploads only: resume offsets differ across firmware implementations.
             const negotiated = fieldInt(mass, 5);
             if (negotiated >= 0) sliceLength = Math.min(negotiated, 4096);
             if (sliceLength < 64) throw new Error('ICON_SLICE');
-          } finally { clearProto(mass); reply.fill(0); }
+            } finally { clearProto(mass); reply.fill(0); }
+          }
+          // PREPARE_APP_ICON can already supply a transfer slice: no second prepare is needed then.
+          if (sliceLength < 64 || sliceLength > 4096) throw new Error('ICON_SLICE');
+          started = true; this.reason = 'chunks';
           payload = iconMassPayload(bytes, digest);
           const total = Math.ceil(payload.length / (sliceLength - 6));
           for (let i = 0; i < total; i++) {
@@ -153,7 +182,7 @@ export class NotificationIconExchange {
             const chunk = iconMassChunk(payload, sliceLength, i);
             try { await this.transport.sendChunk(chunk); } finally { chunk.fill(0); }
           }
-          finished = true; this.status = 'uploaded'; // Transport ACKs, never a claim about visible UI.
+          finished = true; this.status = 'uploaded'; this.reason = 'transport_ack'; // No visible UI claim.
         } catch (_) { this.status = 'failed'; }
         finally {
           if (started && !finished && digest.length === 16) {

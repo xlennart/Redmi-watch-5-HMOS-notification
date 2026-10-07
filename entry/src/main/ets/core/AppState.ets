@@ -5,7 +5,7 @@ export enum AppCommand {
   IMPORT, CANCEL_IMPORT, SAVE_CANDIDATE, DISCARD_CANDIDATE,
   AUTHORIZE, NEXT_STEP, PREVIOUS_STEP, ACCOUNT_LOGIN, ACCOUNT_SYNC, CLOSE_LOGIN,
   DELETE_CREDENTIAL, UNSUBSCRIBE, CHECK_CHANNEL, TEST_NOTIFICATION, TEST_VIBRATION,
-  ENABLE_CATEGORIES, CONFIRM_VISIBLE, CONFIRM_NOT_VISIBLE
+  ENABLE_CATEGORIES, CONFIRM_VISIBLE, CONFIRM_NOT_VISIBLE, QUICK_TEST, MATERIAL
 }
 export class DeviceCandidateView {
   reference: number;
@@ -43,6 +43,7 @@ export class AppState {
   dropped: number = 0;
   lastCode: number = 0;
   iconStatus: string = 'notRequested';
+  iconReason: string = '';
   pendingKind: string = '';
   sessionBusy: boolean = false;
   step: number = 1;
@@ -54,6 +55,11 @@ export class AppState {
   accountFailed: boolean = false;
   diagnosticResult: string = '尚未检查消息通道。';
   confirmationRequired: boolean = false;
+  testState: string = 'idle';
+  testKind: string = 'notification';
+  testPausedRelay: boolean = false;
+  diagnosticIconStatus: string = 'notRequested';
+  diagnosticIconReason: string = '';
   issue: string = '';
   notice: string = '';
   noticeFailed: boolean = false;
@@ -71,7 +77,7 @@ export class AppState {
     next.notificationMode = this.notificationMode; next.relayEnabled = this.relayEnabled;
     next.connection = this.connection; next.lastAcknowledged = this.lastAcknowledged;
     next.received = this.received; next.acknowledged = this.acknowledged; next.failed = this.failed;
-    next.dropped = this.dropped; next.lastCode = this.lastCode; next.iconStatus = this.iconStatus;
+    next.dropped = this.dropped; next.lastCode = this.lastCode; next.iconStatus = this.iconStatus; next.iconReason = this.iconReason;
     next.pendingKind = this.pendingKind; next.sessionBusy = this.sessionBusy; next.step = this.step;
     next.candidatesVisible = this.candidatesVisible;
     next.candidates = this.candidates.map(item => new DeviceCandidateView(item.reference, item.name, item.supported, item.detail));
@@ -79,6 +85,8 @@ export class AppState {
     next.credentialCandidates = this.credentialCandidates.map(item => new CredentialCandidateView(item.reference, item.label));
     next.accountFailed = this.accountFailed; next.diagnosticResult = this.diagnosticResult;
     next.confirmationRequired = this.confirmationRequired; next.issue = this.issue;
+    next.testState = this.testState; next.testKind = this.testKind; next.testPausedRelay = this.testPausedRelay;
+    next.diagnosticIconStatus = this.diagnosticIconStatus; next.diagnosticIconReason = this.diagnosticIconReason;
     next.notice = this.notice; next.noticeFailed = this.noticeFailed; next.large = this.large;
     next.loginVisible = this.loginVisible; next.loginSensitivePage = this.loginSensitivePage; next.loginNotice = this.loginNotice;
     return next;

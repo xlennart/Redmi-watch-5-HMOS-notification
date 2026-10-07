@@ -30,9 +30,13 @@ test('relay intent, permission uncertainty, actual session activity and diagnost
   current.sessionBusy = false; current.connection = 'unknown'; current.acknowledged = 7;
   current.diagnosticResult = 'Synthetic transport acknowledgement'; current.confirmationRequired = true;
   current.iconStatus = 'uploaded'; current.pendingKind = 'refresh';
+  current.testState = 'awaiting'; current.testPausedRelay = true;
+  current.diagnosticIconStatus = 'unavailable'; current.diagnosticIconReason = 'media_9001002';
   const snapshot = current.copy();
   assert.equal(snapshot.relayEnabled, true); assert.equal(snapshot.permissionKnown, false);
   assert.equal(snapshot.sessionBusy, false); assert.equal(snapshot.connection, 'unknown');
   assert.equal(snapshot.acknowledged, 7); assert.equal(snapshot.confirmationRequired, true);
   assert.equal(snapshot.iconStatus, 'uploaded'); assert.equal(snapshot.pendingKind, 'refresh');
+  assert.equal(snapshot.testState, 'awaiting'); assert.equal(snapshot.testPausedRelay, true);
+  assert.equal(snapshot.diagnosticIconReason, 'media_9001002');
 });

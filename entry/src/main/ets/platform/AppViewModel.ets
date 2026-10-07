@@ -64,6 +64,7 @@ export class AppViewModel {
       const stored = new DeviceSelectionStore(this.context.filesDir).read();
       const id = relay.deviceId || stored;
       if (!id || !connection.getPairedDevices().includes(id)) return;
+      new DeviceSelectionStore(this.context.filesDir).write(id);
       this.selectedId = id; this.current.hasDevice = true;
       this.current.deviceName = connection.getRemoteDeviceName(id) || '已配对手表';
       this.current.supported = this.supported(this.current.deviceName);
@@ -75,7 +76,7 @@ export class AppViewModel {
     const store = new RelayStore(this.context.filesDir); const stats = store.stats();
     this.current.received = probe.received; this.current.acknowledged = stats.acknowledged;
     this.current.failed = stats.failed; this.current.dropped = stats.dropped; this.current.lastCode = stats.lastCode;
-    this.current.iconStatus = stats.lastIconStatus; this.current.relayEnabled = store.config().enabled;
+    this.current.iconStatus = stats.lastIconStatus; this.current.iconReason = stats.lastIconReason; this.current.relayEnabled = store.config().enabled;
     this.current.sessionBusy = store.active();
     this.current.lastAcknowledged = stats.acknowledged > 0;
     // No current connection stage can be inferred from an old cumulative counter.
@@ -94,7 +95,7 @@ export class AppViewModel {
     }
     await this.authorization();
     if (epoch !== this.operationEpoch || this.disposed) return;
-    this.current.notice = '状态已刷新。收包记录不代表当前在线或实际显示。';
+    this.current.notice = '';
   }
   private async authorization(): Promise<void> {
     if (!NOTIFICATION_PROBE_ENABLED) return;
@@ -134,13 +135,16 @@ export class AppViewModel {
     this.current.credentialCandidates = []; this.current.importCandidate = false;
   }
   private cancelPending(): void {
+    const interrupted = this.current.pendingKind.length > 0;
+    if (this.current.pendingKind === 'test' && this.current.testState === 'running') this.current.testState = 'cancelled';
     this.operationEpoch++; this.importJob?.cancel(); this.channelProbe?.cancel(); this.testSession?.cancel();
     this.loginReject?.(new MiAccountSyncError('已取消账号同步', -17));
-    this.current.pendingKind = ''; this.current.connection = 'unknown'; this.current.confirmationRequired = false;
+    this.current.pendingKind = ''; this.current.connection = 'unknown';
+    if (interrupted) this.current.confirmationRequired = false;
   }
   private navigate(route: string): void {
     this.cancelPending(); this.clearCandidates(); this.current.loginVisible = false;
-    clearMiFitnessAccountSession(); this.current.route = route;
+    clearMiFitnessAccountSession(); this.current.route = route; this.current.notice = ''; this.current.noticeFailed = false;
   }
   dispose(): void {
     this.disposed = true; clearInterval(this.poll); this.cancelPending(); this.clearCandidates();
@@ -153,11 +157,12 @@ export class AppViewModel {
       case AppCommand.DEVICE: this.navigate('device'); break;
       case AppCommand.NOTIFICATIONS: this.navigate('notifications'); break;
       case AppCommand.EXIT_SETUP: this.navigate(this.current.origin); break;
-      case AppCommand.CLOSE_LOGIN: this.navigate('device'); break;
+      case AppCommand.CLOSE_LOGIN: this.cancelPending(); this.clearCandidates(); clearMiFitnessAccountSession(); this.current.loginVisible = false; this.current.route = 'setup'; this.current.step = 2; break;
       case AppCommand.CANCEL_IMPORT:
         this.cancelPending(); this.clearCandidates(); this.current.importPhase = 'cancelled';
         this.current.notice = '本次导入已取消，原有材料保留。'; break;
       case AppCommand.STOP_RELAY:
+        this.current.testPausedRelay = false;
         this.cancelPending(); this.execute('stop', () => this.stopRelay()).catch(() => {}); return;
       default:
         if (this.current.pendingKind) return;
@@ -171,6 +176,10 @@ export class AppViewModel {
       case AppCommand.SETUP:
         this.current.origin = this.current.route; this.current.route = 'setup';
         this.current.step = !this.current.hasDevice ? 1 : !this.current.material ? 2 : (!this.current.permissionKnown || !this.current.permission) ? 3 : 4; break;
+      case AppCommand.MATERIAL:
+        this.current.origin = this.current.route; this.current.route = 'setup'; this.current.step = this.current.hasDevice ? 2 : 1; break;
+      case AppCommand.QUICK_TEST:
+        this.execute('test', () => this.quickTest()).catch(() => {}); return;
       case AppCommand.CHANGE_DEVICE:
         this.execute('change-device', async () => {
           const epoch = this.operationEpoch;
@@ -183,11 +192,17 @@ export class AppViewModel {
       case AppCommand.DISCOVER: this.execute('discover', () => this.discover()).catch(() => {}); return;
       case AppCommand.SELECT_DEVICE: this.execute('select', async () => { this.select(reference); }).catch(() => {}); return;
       case AppCommand.START_RELAY:
+        if (this.current.hasDevice && !this.current.supported) {
+          this.current.origin = this.current.route; this.current.route = 'setup'; this.current.step = 1;
+          this.current.notice = '当前手表暂不支持通知转发，请重新选择。'; break;
+        }
         if (!this.current.hasDevice || !this.current.material || !this.current.permission || !this.current.permissionKnown) {
           this.dispatchIdle(AppCommand.SETUP, -1); return;
         }
         this.execute('start', () => this.startRelay()).catch(() => {}); return;
-      case AppCommand.AUTHORIZE: this.execute('authorize', () => this.authorize()).catch(() => {}); return;
+      case AppCommand.AUTHORIZE:
+        if (!this.current.hasDevice) { this.dispatchIdle(AppCommand.SETUP, -1); return; }
+        this.execute('authorize', () => this.authorize()).catch(() => {}); return;
       case AppCommand.IMPORT: this.execute('import', () => this.importCredentials()).catch(() => {}); return;
       case AppCommand.SAVE_CANDIDATE: this.execute('save', () => this.save(reference)).catch(() => {}); return;
       case AppCommand.DISCARD_CANDIDATE: this.clearCandidates(); this.current.importPhase = 'cancelled'; break;
@@ -216,11 +231,11 @@ export class AppViewModel {
         this.execute('diagnostic', () => this.diagnose(command)).catch(() => {}); return;
       case AppCommand.CONFIRM_VISIBLE:
         if (this.current.confirmationRequired) {
-          this.current.confirmationRequired = false; this.current.diagnosticResult += '\n已记录本次人工确认：提醒可见 / 震动已执行。';
+          this.current.confirmationRequired = false; this.current.testState = 'confirmed'; this.current.diagnosticResult += '\n已记录本次人工确认：提醒可见 / 震动已执行。';
         } break;
       case AppCommand.CONFIRM_NOT_VISIBLE:
         if (this.current.confirmationRequired) {
-          this.current.confirmationRequired = false; this.current.diagnosticResult += '\n本次人工反馈：未显示 / 未执行。收包证据保留。';
+          this.current.confirmationRequired = false; this.current.testState = 'notVisible'; this.current.diagnosticResult += '\n本次人工反馈：未显示 / 未执行。收包证据保留。';
         } break;
     }
     this.publish();
@@ -294,7 +309,9 @@ export class AppViewModel {
     if (epoch !== this.operationEpoch || this.disposed) return;
     const config = new RelayConfig(); config.enabled = true; config.deviceId = this.selectedId;
     new RelayStore(this.context.filesDir).setConfig(config); this.current.relayEnabled = true;
-    this.current.notice = '通知转发已开启，等待已授权应用的新通知。消息通道按需连接。';
+    this.current.testPausedRelay = false;
+    this.current.notice = '通知转发已开启。';
+    if (this.current.route === 'setup') this.current.route = 'home';
   }
   private async stopRelay(): Promise<void> {
     const store = new RelayStore(this.context.filesDir); store.setConfig(new RelayConfig());
@@ -338,6 +355,25 @@ export class AppViewModel {
     this.clearCandidates(); this.current.material = true; this.current.importPhase = 'saved';
     this.current.notice = '认证材料已保存在手机安全存储中。设备匹配由后续认证确认。';
   }
+  private async quickTest(): Promise<void> {
+    const epoch = this.operationEpoch;
+    this.current.testState = 'running'; this.current.confirmationRequired = false; this.current.notice = '';
+    this.current.testPausedRelay = this.current.testPausedRelay || new RelayStore(this.context.filesDir).config().enabled;
+    this.publish();
+    try {
+      await this.stopRelay();
+      if (epoch !== this.operationEpoch || this.disposed) return;
+      this.current.notice = '';
+      await this.diagnose(AppCommand.TEST_NOTIFICATION);
+      if (epoch !== this.operationEpoch || this.disposed) return;
+      this.current.testState = this.current.confirmationRequired ? 'awaiting' : 'failed';
+    } catch (error) {
+      if (epoch === this.operationEpoch && !this.disposed) this.current.testState = 'failed';
+      throw error as WatchChannelError;
+    } finally {
+      if (epoch === this.operationEpoch && this.current.testState === 'running') this.current.testState = 'cancelled';
+    }
+  }
   private async diagnose(command: AppCommand): Promise<void> {
     const epoch = this.operationEpoch;
     const store = new RelayStore(this.context.filesDir);
@@ -363,9 +399,15 @@ export class AppViewModel {
             new AppNotificationIcon(this.context.resourceManager, 'com.xlennart.wristnotifications'));
           if (epoch === this.operationEpoch) {
             this.current.confirmationRequired = true;
+            this.current.testState = 'awaiting'; this.current.testKind = command === AppCommand.TEST_VIBRATION ? 'vibration' : 'notification';
             this.current.diagnosticResult += command === AppCommand.TEST_VIBRATION ? '\n请确认手表是否短震两次。' : '\n请查看手表通知中心是否出现“腕间通知测试”。';
           }
-        } finally { if (this.testSession === session) this.testSession = undefined; }
+        } finally {
+          if (epoch === this.operationEpoch) {
+            this.current.diagnosticIconStatus = session.iconStatus; this.current.diagnosticIconReason = session.iconReason;
+          }
+          if (this.testSession === session) this.testSession = undefined;
+        }
       }
     } catch (error) {
       if (epoch === this.operationEpoch) {

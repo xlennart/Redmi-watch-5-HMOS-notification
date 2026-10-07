@@ -66,6 +66,7 @@ export class WatchNotificationRelay {
         const currentStats = this.store.stats();
         if (acknowledged) currentStats.acknowledged++; else currentStats.failed++;
         currentStats.lastIconStatus = session.iconStatus;
+        currentStats.lastIconReason = session.iconReason;
         currentStats.lastCode = errorCode; this.store.setStats(currentStats);
       }
     } finally { this.pumping = false; this.store.setActive(false); }
