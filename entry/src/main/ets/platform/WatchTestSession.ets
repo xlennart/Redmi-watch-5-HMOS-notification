@@ -49,7 +49,7 @@ export class WatchTestSession {
   private decoder: WatchV2Decoder = new WatchV2Decoder();
   private versionDecoder: WatchVersionDecoder = new WatchVersionDecoder();
   private writeQueue: Promise<void> = Promise.resolve();
-  private wake: (() => void) | undefined = undefined;
+  private waiters: Array<() => void> = [];
   private failure: WatchChannelError | undefined = undefined;
   private listener: ((data: ArrayBuffer) => void) = (data: ArrayBuffer) => { this.receive(data); };
   private keyMaterial: Uint8Array = new Uint8Array();
@@ -58,17 +58,58 @@ export class WatchTestSession {
   private lastMusicSequence: number = -1;
   private lastMusicPayload: Uint8Array = new Uint8Array();
   private notificationSettings: string = '';
+  private routed: boolean = false;
+  private applications: ProtoField[][] = [];
+  private routing: Promise<void> = Promise.resolve();
+  private musicListener: ((fields: ProtoField[]) => void) | undefined = undefined;
+  private packets: Promise<void> = Promise.resolve();
+
+  onMusic(listener: (fields: ProtoField[]) => void): void {
+    this.musicListener = listener; this.routed = true;
+    const pending = this.queue.filter(frame => frame.type === 3);
+    this.queue = this.queue.filter(frame => frame.type !== 3);
+    for (let i = 0; i < pending.length; i++) this.route(pending[i]);
+  }
+  private signal(): void {
+    const waiting = this.waiters.slice();
+    for (let i = 0; i < waiting.length; i++) waiting[i]();
+  }
+  private route(frame: WatchV2Frame): void {
+    this.routing = this.routing.then(async () => {
+      if (this.closed) { frame.payload.fill(0); return; }
+      const fields = await this.applicationReply(frame);
+      if (this.closed) { clearProto(fields); return; }
+      if (fieldInt(fields, 1) === 18) {
+        try { this.musicListener?.(fields); } finally { clearProto(fields); }
+      } else if (fields.length) {
+        if (this.applications.length >= 32) { clearProto(fields); throw new Error('WATCH_QUEUE_LIMIT'); }
+        this.applications.push(fields); this.signal();
+      }
+    }).catch(() => { this.failure = new WatchChannelError('手表事件路由失败', -24); this.signal(); });
+  }
+  private async packet(operation: () => Promise<void>): Promise<void> {
+    const next = this.packets.then(operation); this.packets = next.catch(() => {}); await next;
+  }
 
   async keepConnected(deviceId: string, ready: (session: WatchTestSession) => Promise<void>): Promise<void> {
     await this.run(deviceId, () => {}, false, false, undefined, undefined, ready);
   }
   async sendApplication(command: Uint8Array): Promise<void> {
-    const sequence = await this.sendCommand(command, true);
-    const ack = await this.nextFrame(1, '等待手表指令收包', sequence); ack.payload.fill(0);
+    await this.packet(async () => {
+      const sequence = await this.sendCommand(command, true);
+      const ack = await this.nextFrame(1, '等待手表指令收包', sequence); ack.payload.fill(0);
+    });
+  }
+  private async readApplication(stage: string, timeoutMs: number): Promise<ProtoField[]> {
+    if (this.routed) {
+      await this.waitUntil(() => this.applications.length > 0, stage, timeoutMs);
+      return this.applications.shift() || [];
+    }
+    return await this.applicationReply(await this.nextFrame(3, stage, -1, timeoutMs));
   }
   async nextApplication(timeoutMs: number = 250): Promise<ProtoField[]> {
     if (this.deferred.length) return this.deferred.shift() || [];
-    try { return await this.applicationReply(await this.nextFrame(3, '等待手表事件', -1, timeoutMs)); }
+    try { return await this.readApplication('等待手表事件', timeoutMs); }
     catch (error) { if ((error as WatchChannelError).code === -23 && !this.failure && !this.closed) return []; throw error as WatchChannelError; }
   }
   private deferMusic(fields: ProtoField[]): void {
@@ -87,7 +128,7 @@ export class WatchTestSession {
   }
 
   cancel(): void {
-    this.closed = true; this.failure = new WatchChannelError('认证测试已取消', -21); this.wake?.();
+    this.closed = true; this.failure = new WatchChannelError('认证测试已取消', -21); this.signal();
     if (this.id >= 0) { try { socket.sppCloseClientSocket(this.id); } catch (_) { } }
   }
   private send(data: Uint8Array): Promise<void> {
@@ -101,7 +142,7 @@ export class WatchTestSession {
         })]);
       } finally { clearTimeout(timer); bytes.fill(0); }
     });
-    this.writeQueue = next.catch(() => { this.failure = new WatchChannelError('发送手表协议数据', -30); this.wake?.(); });
+    this.writeQueue = next.catch(() => { this.failure = new WatchChannelError('发送手表协议数据', -30); this.signal(); });
     return next;
   }
   private receive(data: ArrayBuffer): void {
@@ -118,25 +159,27 @@ export class WatchTestSession {
         for (let i = 0; i < frames.length; i++) {
           const frame = frames[i];
           if (frame.type === 3) this.send(encodeWatchV2(1, frame.sequence, new Uint8Array())).catch(() => { });
+          if (frame.type === 3 && this.routed) { this.route(frame); continue; }
           if (this.queue.length >= 32) throw new Error('WATCH_QUEUE_LIMIT');
           this.queue.push(frame);
         }
       }
-      this.wake?.();
-    } catch (_) { this.failure = new WatchChannelError('读取手表协议数据', -24); this.wake?.(); }
+      this.signal();
+    } catch (_) { this.failure = new WatchChannelError('读取手表协议数据', -24); this.signal(); }
   }
   private async waitUntil(predicate: () => boolean, stage: string, timeout: number = 8000): Promise<void> {
     if (this.failure) throw this.failure;
     if (predicate()) return;
     await new Promise<void>((resolve, reject) => {
       const duration = Math.max(1, Math.min(timeout, this.deadline - Date.now()));
-      const timer = setTimeout(() => { this.wake = undefined; reject(new WatchChannelError(stage, -23)); }, duration);
-      this.wake = () => {
+      const remove = (): void => { this.waiters = this.waiters.filter(item => item !== waiting); };
+      const timer = setTimeout(() => { remove(); reject(new WatchChannelError(stage, -23)); }, duration);
+      const waiting = (): void => {
         if (!this.failure && !predicate()) return;
-        clearTimeout(timer); this.wake = undefined;
+        clearTimeout(timer); remove();
         if (this.failure) reject(this.failure); else resolve();
       };
-      this.wake();
+      this.waiters.push(waiting); waiting();
     });
   }
   private async nextFrame(type: number, stage: string, sequence: number = -1, timeout: number = 8000): Promise<WatchV2Frame> {
@@ -200,13 +243,12 @@ export class WatchTestSession {
   }
 
   private async sendIconCommand(command: Uint8Array): Promise<void> {
-    const sequence = await this.sendCommand(command, true);
-    const ack = await this.nextFrame(1, '等待图标指令收包', sequence, 2000); ack.payload.fill(0);
+    await this.sendApplication(command);
   }
   private async iconMassReply(timeoutMs: number): Promise<Uint8Array> {
     const until = Date.now() + Math.min(3000, timeoutMs);
     while (Date.now() < until) {
-      const fields = await this.applicationReply(await this.nextFrame(3, '等待图标上传准备', -1, until - Date.now()));
+      const fields = await this.readApplication('等待图标上传准备', until - Date.now());
       try {
         this.deferMusic(fields);
         if (fieldInt(fields, 1) === 7 && fieldInt(fields, 2) === 0 && fieldInt(fields, 100) > 0) {
@@ -221,12 +263,14 @@ export class WatchTestSession {
     throw new Error('ICON_MASS_TIMEOUT');
   }
   private async sendIconChunk(chunk: Uint8Array): Promise<void> {
-    const sequence = this.sequence++ & 255;
-    const body = joinBytes([new Uint8Array([2, 1]), chunk]);
-    try {
-      await this.send(encodeWatchV2(3, sequence, body));
-      const ack = await this.nextFrame(1, '等待图标分片收包', sequence, 2000); ack.payload.fill(0);
-    } finally { body.fill(0); }
+    await this.packet(async () => {
+      const sequence = this.sequence++ & 255;
+      const body = joinBytes([new Uint8Array([2, 1]), chunk]);
+      try {
+        await this.send(encodeWatchV2(3, sequence, body));
+        const ack = await this.nextFrame(1, '等待图标分片收包', sequence, 2000); ack.payload.fill(0);
+      } finally { body.fill(0); }
+    });
   }
   private iconExchange(source: Uint8Array, provider: NotificationIconProvider): NotificationIconExchange {
     const transport: NotificationIconTransport = {
@@ -241,10 +285,10 @@ export class WatchTestSession {
   }
 
   private async checkNotificationSettings(): Promise<string> {
-    await this.sendCommand(joinBytes([protoInt(1, 7), protoInt(2, 6)]), true);
+    await this.sendApplication(joinBytes([protoInt(1, 7), protoInt(2, 6)]));
     const until = Date.now() + 8000;
     while (Date.now() < until) {
-      const fields = await this.applicationReply(await this.nextFrame(3, '验证加密通知配置回应', -1, until - Date.now()));
+      const fields = await this.readApplication('验证加密通知配置回应', until - Date.now());
       try {
         this.deferMusic(fields);
         if (fieldInt(fields, 1) !== 7 || fieldInt(fields, 2) !== 6) continue;
@@ -261,13 +305,12 @@ export class WatchTestSession {
   }
 
   private async readNotificationAppPolicy(): Promise<string> {
-    await this.sendCommand(joinBytes([protoInt(1, 7), protoInt(2, 3)]), true);
+    await this.sendApplication(joinBytes([protoInt(1, 7), protoInt(2, 3)]));
     const until = Date.now() + 8000;
     while (Date.now() < until) {
-      let frame: WatchV2Frame;
-      try { frame = await this.nextFrame(3, '读取手表通知应用策略', -1, until - Date.now()); }
+      let fields: ProtoField[];
+      try { fields = await this.readApplication('读取手表通知应用策略', until - Date.now()); }
       catch (error) { if ((error as WatchChannelError).code === -23 && !this.failure) return '应用过滤策略未报告'; throw error as WatchChannelError; }
-      const fields = await this.applicationReply(frame);
       try {
         this.deferMusic(fields);
         if (fieldInt(fields, 1) !== 7 || fieldInt(fields, 2) !== 3) continue;
@@ -300,10 +343,9 @@ export class WatchTestSession {
     const until = Date.now() + duration; let summary = '暂未收到应用层回应';
     progress(`认证及加密通道通过；${settings}。通知数据已收包，正在等待后续回应。`);
     while (Date.now() < until && !this.closed) {
-      let frame: WatchV2Frame;
-      try { frame = await this.nextFrame(3, '等待测试提醒后续回应', -1, until - Date.now()); }
+      let fields: ProtoField[];
+      try { fields = await this.readApplication('等待测试提醒后续回应', until - Date.now()); }
       catch (error) { if ((error as WatchChannelError).code === -23 && !this.failure) break; throw error as WatchChannelError; }
-      const fields = await this.applicationReply(frame);
       try {
         this.deferMusic(fields);
         const type = fieldInt(fields, 1); const subtype = fieldInt(fields, 2); const status = fieldInt(fields, 100);
@@ -440,7 +482,10 @@ export class WatchTestSession {
       const code = (error as WatchChannelError).code || (error as BusinessError).code || -3;
       throw new WatchChannelError((error as WatchChannelError).stage || stage, code);
     } finally {
-      clearTimeout(connectTimer); this.closed = true; this.wake = undefined;
+      clearTimeout(connectTimer); this.closed = true;
+      if (!this.failure) this.failure = new WatchChannelError('手表会话已关闭', -21);
+      this.signal(); this.musicListener = undefined;
+      for (let i = 0; i < this.applications.length; i++) clearProto(this.applications[i]); this.applications = [];
       if (this.id >= 0) {
         try { socket.off('sppRead', this.id, this.listener); } catch (_) { }
         try { socket.sppCloseClientSocket(this.id); } catch (_) { }

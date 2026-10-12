@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import ts from 'typescript';
-import { joinBytes, protoInt, protoBytes, clearProto, WatchV2Frame } from '../.cloud-build/out/WatchProtocol.js';
+import { joinBytes, protoInt, protoBytes, clearProto, WatchV2Frame, encodeWatchV2 } from '../.cloud-build/out/WatchProtocol.js';
 import { parseWatchMusicCommand } from '../.cloud-build/out/WatchMusic.js';
 
 // Runs the production routing/cancellation code; only SDK/socket/crypto adapters are substituted.
@@ -58,4 +58,28 @@ test('cancellation wakes an idle receiver and prevents a late media dispatch',as
   const instance=session();
   const pending=instance.nextApplication(2000); instance.cancel();
   await assert.rejects(pending,error=>error.code===-21);
+});
+
+test('encrypted controls dispatch while both a transport ACK and a notification reply are still pending',async()=>{
+  const instance=session(); instance.v2=true;
+  const received=[]; instance.onMusic(fields=>received.push(parseWatchMusicCommand(fields).action));
+  let ackDone=false,replyDone=false;
+  const ack=instance.nextFrame(1,'ack',9,1000).then(data=>{ackDone=true;return data;});
+  const reply=instance.nextApplication(1000).then(data=>{replyDone=true;return data;});
+  const media=frame(4,control()); instance.receive(encodeWatchV2(media.type,media.sequence,media.payload).buffer);
+  await instance.routing;
+  assert.deepEqual(received,['play']); assert.equal(ackDone,false); assert.equal(replyDone,false);
+  instance.receive(encodeWatchV2(1,9,new Uint8Array()).buffer); (await ack).payload.fill(0);
+  assert.equal(replyDone,false);
+  const app=frame(5,joinBytes([protoInt(1,7),protoInt(2,15)]));
+  instance.receive(encodeWatchV2(app.type,app.sequence,app.payload).buffer);
+  const response=await reply; assert.equal(response[0].integer,7);clearProto(response);instance.cancel();
+});
+test('cancellation rejects every concurrent waiter without waiting for separate timeouts',async()=>{
+  const instance=session();instance.onMusic(()=>{});
+  const ack=instance.nextFrame(1,'ack',12,2000); const app=instance.nextApplication(2000);
+  instance.cancel();
+  const results=await Promise.allSettled([ack,app]);
+  assert.ok(results.every(result=>result.status==='rejected'&&result.reason.code===-21));
+  assert.equal(instance.waiters.length,0);
 });

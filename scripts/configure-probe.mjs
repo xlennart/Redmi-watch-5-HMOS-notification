@@ -21,7 +21,6 @@ export function configuration(mode) {
   if (mode === 'notifications-music') {
     manifest.module.abilities[0].backgroundModes = ['bluetoothInteraction'];
     manifest.module.requestPermissions.push({ name: 'ohos.permission.KEEP_BACKGROUND_RUNNING' });
-    manifest.module.requestPermissions.push({ name: 'ohos.permission.ACCESS_NOTIFICATION_POLICY' });
     // API 23 public controller is still an ACL system_grant capability in the target SDK.
     manifest.module.requestPermissions.push({ name: 'ohos.permission.MANAGE_MEDIA_RESOURCES_FOR_PUBLIC' });
   }

@@ -76,13 +76,34 @@ test('official protobuf omission of zero-valued image format still negotiates RG
   assert.equal(invalid.exchange.status, 'unsupported'); assert.equal(invalid.calls(), 0);
 });
 
+test('real Redmi Watch 5 negotiation uploads a 176px BGRA icon above the old 64KiB limit', async () => {
+  const f = fixture();
+  const bytes = encodeWatchIcon(new Uint8Array([20, 40, 80, 255]), 1, 1, 176, 2, false);
+  const original = bytes.slice();
+  assert.equal(bytes.length, 123904);
+  const exchange = new NotificationIconExchange(name, { async load(side, format) {
+    assert.equal(side, 176); assert.equal(format, 2); return bytes;
+  } }, f.transport);
+  await exchange.request();
+  await exchange.handle(15, protoBytes(15, joinBytes([
+    protoInt(1, 0), protoInt(2, 2), protoInt(3, 176), protoInt(5, 2048)
+  ])));
+  assert.equal(exchange.status, 'uploaded');
+  const payload = Buffer.concat(f.chunks.map(chunk => Buffer.from(chunk.subarray(4))));
+  assert.equal(payload.readUInt32LE(18), original.length);
+  assert.deepEqual(payload.subarray(22, -4), Buffer.from(original));
+  assert.equal(payload.readUInt32LE(payload.length - 4), iconCrc32(payload.subarray(0, -4)));
+  assert.ok(bytes.every(value => value === 0));
+  assert.throws(() => iconMassPayload(new Uint8Array(262145), new Uint8Array(16)), /ICON_MASS/);
+});
+
 test('non-square icons retain aspect ratio and reject oversized or unknown formats', () => {
   const pixels = new Uint8Array([0, 0, 255, 255, 255, 0, 0, 255]);
   const encoded = encodeWatchIcon(pixels, 2, 1, 4, 3, false);
   assert.equal(encoded.length, 64);
   assert.deepEqual([...encoded.subarray(0, 16)], new Array(16).fill(0));
   assert.deepEqual([...encoded.subarray(16, 20)], [0, 0, 255, 255]);
-  assert.throws(() => encodeWatchIcon(pixels, 2, 1, 129, 3, false), /ICON_SIZE/);
+  assert.throws(() => encodeWatchIcon(pixels, 2, 1, 257, 3, false), /ICON_SIZE/);
   assert.throws(() => encodeWatchIcon(pixels, 2, 1, 0, 3, false), /ICON_SIZE/);
   assert.throws(() => encodeWatchIcon(pixels, 2, 1, 2, 6, false), /ICON_FORMAT/);
   assert.throws(() => encodeWatchIcon(pixels, 2000, 1, 2, 3, false), /ICON_PIXELS/);
@@ -136,7 +157,7 @@ test('unsolicited, foreign or ambiguous short package requests never resolve an 
 });
 
 test('unsupported image format, dimensions and compression keep the text-only path', async () => {
-  for (const response of [ready(129), ready(2, 12), ready(2, 3, 1)]) {
+  for (const response of [ready(257), ready(2, 12), ready(2, 3, 1)]) {
     const f = fixture(); await f.exchange.handle(16, query()); await f.exchange.handle(15, response);
     assert.equal(f.exchange.status, 'unsupported'); assert.equal(f.calls(), 0); assert.equal(f.chunks.length, 0);
   }
@@ -170,7 +191,7 @@ test('encoded PNG icons accept bounded dimensions and reject malformed or oversi
   assert.throws(() => validateIconData(new Uint8Array(33), 2, 6), /ICON_PNG/);
   const oversized = png.slice(); oversized.writeUInt32BE(3, 16);
   assert.throws(() => validateIconData(oversized, 2, 6), /ICON_PNG_SIZE/);
-  assert.throws(() => validateIconData(new Uint8Array(65537), 2, 6), /ICON_LENGTH/);
+  assert.throws(() => validateIconData(new Uint8Array(262145), 2, 6), /ICON_LENGTH/);
 });
 
 test('PNG negotiation uploads the encoded file length rather than a raw-pixel length', async () => {

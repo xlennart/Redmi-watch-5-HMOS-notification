@@ -112,23 +112,16 @@ export class WatchNotificationRelay {
         if (this.media !== media || !this.store.config().musicEnabled) return;
         const ready = this.store.music(); ready.stage = 'ready'; ready.lastCode = 0; ready.updatedMs = Date.now(); this.store.setMusic(ready);
         this.musicReady?.(); this.musicReady = undefined;
-        let nextState = 0; let lastState = ''; let heartbeat = 0; let announce = 0;
-        while (!this.closed && this.media === media) {
-          const config = this.store.config(); if (!config.musicEnabled || config.deviceId !== deviceId) break;
-          if (Date.now() >= heartbeat) {
-            heartbeat = Date.now() + 3000; const stats = this.store.music(); stats.updatedMs = Date.now(); this.store.setMusic(stats);
-          }
-          if (config.enabled) {
-            const item = this.queue.take();
-            if (item) {
-              if (Date.now() - item.timestampMs <= 60000) await this.sendItem(live, item, deviceId, true);
-              else { item.clear(); const stats = this.store.stats(); stats.dropped++; this.store.setStats(stats); }
-            }
-          } else this.queue.clear();
-          if (Date.now() >= nextState && this.media === media) {
-            nextState = Date.now() + 1000;
+        let active = true; let dirty = true; let lastState = ''; let progressDue = 0;
+        let publishing: Promise<void> | undefined = undefined;
+        let commands: Promise<void> = Promise.resolve(); let queued = 0;
+        let stateFailure: WatchChannelError | undefined = undefined;
+        const valid = (): boolean => active && !this.closed && this.media === media && this.store.config().musicEnabled;
+        const publish = (): void => {
+          if (!valid() || publishing) return;
+          publishing = (async () => {
             const player = await media.currentPlayer();
-            if (this.media !== media || !this.store.config().musicEnabled) break;
+            if (!valid()) return;
             if (player.state === 'permission_required') throw new WatchChannelError('媒体授权已撤销', 201);
             const encoder = new util.TextEncoder();
             const track = encoder.encodeInto(player.title.replace(/\u0000/g, '').slice(0, 120));
@@ -136,31 +129,65 @@ export class WatchNotificationRelay {
             const state: WatchMusicState = { state: player.state === 'playing' ? 'playing' : player.state === 'paused' ? 'paused' : 'none',
               track: track, artist: artist, positionSeconds: Math.floor((player.positionMs || 0) / 1000),
               durationSeconds: Math.floor((player.durationMs || 0) / 1000), volumePercent: player.volumePercent || 0 };
-            // State coalescing keeps metadata transient and avoids a blind repeated write on every timer tick.
-            const identity = JSON.stringify(state);
+            const identity = player.state + '|' + player.volumePercent + '|' + player.title + '|' + player.artist + '|' + player.durationMs;
             try {
-              if (identity !== lastState || Date.now() >= announce) {
+              if (dirty || identity !== lastState || Date.now() >= progressDue) {
+                dirty = false;
                 await live.sendApplication(watchMusicStateCommand(state));
-                lastState = identity; announce = Date.now() + 30000;
+                lastState = identity; progressDue = Date.now() + (player.state === 'playing' ? 5000 : 30000);
                 const stats = this.store.music(); stats.synced++; stats.updatedMs = Date.now(); this.store.setMusic(stats);
               }
             } finally { track.fill(0); artist.fill(0); }
+          })().catch((error: BusinessError) => {
+            stateFailure = new WatchChannelError('媒体状态同步失败', error.code || -64); live.cancel();
+          }).finally(() => { publishing = undefined; });
+        };
+        // A single decrypting receiver dispatches controls independently of state/notification ACK waits.
+        live.onMusic((fields) => {
+          if (!valid() || fieldInt(fields, 100) > 0) return;
+          const request = parseWatchMusicCommand(fields);
+          if (request.action === 'request') { dirty = true; publish(); return; }
+          if (request.action === 'unsupported') return;
+          if (queued >= 8) { const stats = this.store.music(); stats.commandCode = -69; this.store.setMusic(stats); return; }
+          const receivedMs = Date.now(); queued++;
+          commands = commands.then(async () => {
+            queued--;
+            if (!valid()) return;
+            let code = 0; let accepted = false;
+            if (Date.now() - receivedMs > 1000) code = -70;
+            else {
+              const control: WearableMusicControl = { command: request.action === 'play' ? WearableMusicCommand.PLAY :
+                request.action === 'pause' ? WearableMusicCommand.PAUSE : request.action === 'previous' ? WearableMusicCommand.PREVIOUS :
+                request.action === 'next' ? WearableMusicCommand.NEXT : WearableMusicCommand.SET_VOLUME, volumePercent: request.volumePercent };
+              try { await media.control(control); accepted = true; }
+              catch (error) { code = (error as BusinessError).code || -62; }
+            }
+            if (!valid()) return;
+            const stats = this.store.music(); if (accepted) stats.controlled++;
+            stats.commandCode = code; stats.controlMs = Math.min(60000, Date.now() - receivedMs);
+            stats.updatedMs = Date.now(); this.store.setMusic(stats);
+            dirty = true; publish();
+          }).catch(() => {});
+        });
+        const stateTimer = setInterval(publish, 250);
+        let heartbeat = 0; publish();
+        try {
+          while (valid()) {
+            if (stateFailure) throw new WatchChannelError('媒体状态同步失败', (stateFailure as WatchChannelError).code);
+            const config = this.store.config(); if (config.deviceId !== deviceId) break;
+            if (Date.now() >= heartbeat) {
+              heartbeat = Date.now() + 3000; const stats = this.store.music(); stats.updatedMs = Date.now(); this.store.setMusic(stats);
+            }
+            const item = config.enabled ? this.queue.take() : undefined;
+            if (!config.enabled) this.queue.clear();
+            if (item) {
+              if (Date.now() - item.timestampMs <= 60000) await this.sendItem(live, item, deviceId, true);
+              else { item.clear(); const stats = this.store.stats(); stats.dropped++; this.store.setStats(stats); }
+            } else { clearProto(await live.nextApplication(250)); }
           }
-          const fields = await live.nextApplication();
-          try {
-            if (fieldInt(fields, 1) !== 18 || fieldInt(fields, 100) > 0) continue;
-            const request = parseWatchMusicCommand(fields);
-            if (request.action === 'request') { lastState = ''; nextState = 0; continue; }
-            if (request.action === 'unsupported' || this.media !== media || !this.store.config().musicEnabled) continue;
-            const control: WearableMusicControl = { command: request.action === 'play' ? WearableMusicCommand.PLAY :
-              request.action === 'pause' ? WearableMusicCommand.PAUSE : request.action === 'previous' ? WearableMusicCommand.PREVIOUS :
-              request.action === 'next' ? WearableMusicCommand.NEXT : WearableMusicCommand.SET_VOLUME, volumePercent: request.volumePercent };
-            const stats = this.store.music();
-            try { await media.control(control); stats.controlled++; stats.commandCode = 0; }
-            catch (error) { stats.commandCode = (error as BusinessError).code || -62; }
-            stats.updatedMs = Date.now(); this.store.setMusic(stats); lastState = ''; nextState = 0;
-          } finally { clearProto(fields); }
-        }
+          if (stateFailure) throw new WatchChannelError('媒体状态同步失败', (stateFailure as WatchChannelError).code);
+        } catch (error) { throw stateFailure || error as WatchChannelError; }
+        finally { active = false; clearInterval(stateTimer); await commands; await publishing; }
       });
     } catch (error) {
       if (this.media !== media || !this.store.config().musicEnabled) return;
@@ -179,9 +206,10 @@ export class WatchNotificationRelay {
       while (!this.closed) {
         const config = this.store.config();
         if (config.musicEnabled && this.media) {
+          let activityDue = 0;
           const timer = setInterval(() => {
             const current = this.store.config();
-            this.store.setActive(true);
+            if (Date.now() >= activityDue) { activityDue = Date.now() + 2000; this.store.setActive(true); }
             if (this.closed || !current.musicEnabled || current.deviceId !== config.deviceId) this.session?.cancel();
           }, 500);
           try { await this.maintainMusic(config.deviceId); } finally { clearInterval(timer); }
@@ -202,9 +230,10 @@ export class WatchNotificationRelay {
         const encode = (value: string): Uint8Array => encoder.encodeInto(value);
         const content: WatchNotificationContent = { packageName: encode(item.packageName), appName: encode(item.appName), title: encode(item.title),
           body: encode(item.body), date: encode(item.timestampMs.toString()), group: encode(item.group), key: encode(item.hash), id: item.id };
+        let activityDue = 0;
         const timer = setInterval(() => {
           const current = this.store.config();
-          this.store.setActive(true);
+          if (Date.now() >= activityDue) { activityDue = Date.now() + 2000; this.store.setActive(true); }
           if (this.closed || !current.enabled || current.deviceId !== config.deviceId) session.cancel();
         }, 500);
         let acknowledged = false; let errorCode = 0;

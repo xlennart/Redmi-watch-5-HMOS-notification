@@ -48,11 +48,18 @@ export class RelayStore {
       result.synced = this.count(parsed.synced); result.controlled = this.count(parsed.controlled);
       result.lastCode = Number.isSafeInteger(parsed.lastCode) ? parsed.lastCode : 0;
       result.commandCode = Number.isSafeInteger(parsed.commandCode) ? parsed.commandCode : 0;
+      result.controlMs = this.count(parsed.controlMs);
       result.updatedMs = Number.isSafeInteger(parsed.updatedMs) ? parsed.updatedMs : 0;
       return result;
     } catch (_) { return new MusicRuntimeStats(); }
   }
   setMusic(stats: MusicRuntimeStats): void { this.write('music-stats.json', JSON.stringify(stats)); }
+  setTestIcon(status: string, reason: string): void {
+    const result = new TestIconStats();
+    if (['notRequested', 'pending', 'cached', 'uploaded', 'unavailable', 'unsupported', 'failed'].includes(status)) result.status = status;
+    if (/^[a-z0-9_-]{0,80}$/.test(reason)) result.reason = reason;
+    result.completedMs = Date.now(); this.write('test-icon-stats.json', JSON.stringify(result));
+  }
   private write(name: string, data: string): void {
     const path = `${this.directory}/${name}`; const file = fileIo.openSync(`${path}.tmp`, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
     try {
@@ -67,4 +74,6 @@ export class RelayStore {
 export class MusicRuntimeStats {
   stage: string = 'off'; synced: number = 0; controlled: number = 0;
   lastCode: number = 0; commandCode: number = 0; updatedMs: number = 0;
+  controlMs: number = 0;
 }
+class TestIconStats { status: string = 'notRequested'; reason: string = ''; completedMs: number = 0; }

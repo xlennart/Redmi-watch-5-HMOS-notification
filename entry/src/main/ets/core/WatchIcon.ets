@@ -18,11 +18,12 @@ export function iconBytesPerPixel(format: number): number {
   throw new Error('ICON_FORMAT');
 }
 export function validateIconSize(side: number): void {
-  if (!Number.isInteger(side) || side < 1 || side > 128) throw new Error('ICON_SIZE');
+  // Redmi Watch 5 requests 176px BGRA icons. Bound raw data to a 256px square.
+  if (!Number.isInteger(side) || side < 1 || side > 256) throw new Error('ICON_SIZE');
 }
 export function validateIconData(bytes: Uint8Array, side: number, format: number): void {
   validateIconSize(side);
-  if (bytes.length < 1 || bytes.length > 65536) throw new Error('ICON_LENGTH');
+  if (bytes.length < 1 || bytes.length > 262144) throw new Error('ICON_LENGTH');
   if (format !== 6) {
     if (bytes.length !== side * side * iconBytesPerPixel(format)) throw new Error('ICON_LENGTH');
     return;
@@ -72,7 +73,7 @@ export function iconPrepareCommand(packageName: Uint8Array): Uint8Array {
     protoBytes(14, joinBytes([protoBytes(1, packageName), protoInt(2, 0)])))]);
 }
 export function iconMassPrepareCommand(md5: Uint8Array, length: number): Uint8Array {
-  if (md5.length !== 16 || !Number.isInteger(length) || length < 1 || length > 65536) throw new Error('ICON_MASS');
+  if (md5.length !== 16 || !Number.isInteger(length) || length < 1 || length > 262144) throw new Error('ICON_MASS');
   const request = joinBytes([protoInt(1, 50), protoBytes(2, md5), protoInt(3, length), protoInt(4, 0)]);
   return joinBytes([protoInt(1, 22), protoInt(2, 0), protoBytes(24, protoBytes(1, request))]);
 }
@@ -89,14 +90,14 @@ export function iconCrc32(bytes: Uint8Array): number {
   return (crc ^ 0xffffffff) >>> 0;
 }
 export function iconMassPayload(bytes: Uint8Array, md5: Uint8Array): Uint8Array {
-  if (md5.length !== 16 || bytes.length < 1 || bytes.length > 65536) throw new Error('ICON_MASS');
+  if (md5.length !== 16 || bytes.length < 1 || bytes.length > 262144) throw new Error('ICON_MASS');
   const result = new Uint8Array(26 + bytes.length); result[1] = 50; result.set(md5, 2);
   const view = new DataView(result.buffer); view.setUint32(18, bytes.length, true); result.set(bytes, 22);
   view.setUint32(result.length - 4, iconCrc32(result.subarray(0, result.length - 4)), true); return result;
 }
 export function iconMassChunk(payload: Uint8Array, sliceLength: number, index: number): Uint8Array {
   // Slice length includes channel/op and the two uint16 part counters. Stay within negotiated 4096-byte frames.
-  if (!Number.isInteger(sliceLength) || sliceLength < 64 || sliceLength > 4096 || payload.length > 65562) throw new Error('ICON_SLICE');
+  if (!Number.isInteger(sliceLength) || sliceLength < 64 || sliceLength > 4096 || payload.length > 262170) throw new Error('ICON_SLICE');
   const partSize = sliceLength - 6; const total = Math.ceil(payload.length / partSize);
   if (!Number.isInteger(index) || index < 0 || index >= total) throw new Error('ICON_PART');
   const body = payload.subarray(index * partSize, Math.min(payload.length, (index + 1) * partSize));
@@ -154,7 +155,7 @@ export class NotificationIconExchange {
         if (compression > 0) { this.status = 'unsupported'; this.reason = 'compression_' + compression; return true; }
         let bytes: Uint8Array = new Uint8Array(); let digest: Uint8Array = new Uint8Array(); let payload: Uint8Array = new Uint8Array();
         let started = false; let finished = false;
-        const until = Date.now() + 8000;
+        const until = Date.now() + 30000;
         try {
           const loaded = await this.provider.load(side, format);
           if (!loaded) { this.status = 'unavailable'; this.reason = this.provider.reason || 'resource'; return true; }

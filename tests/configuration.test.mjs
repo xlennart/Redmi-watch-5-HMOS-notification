@@ -32,7 +32,7 @@ test('music mode explicitly opts into the ACL media controller and Bluetooth con
   const { manifest, modeSource } = configuration('notifications-music');
   const module = JSON.parse(manifest).module;
   assert.ok(module.requestPermissions.some(p => p.name === 'ohos.permission.MANAGE_MEDIA_RESOURCES_FOR_PUBLIC'));
-  assert.ok(module.requestPermissions.some(p => p.name === 'ohos.permission.ACCESS_NOTIFICATION_POLICY'));
+  assert.ok(!module.requestPermissions.some(p => p.name === 'ohos.permission.ACCESS_NOTIFICATION_POLICY'));
   assert.ok(module.requestPermissions.some(p => p.name === 'ohos.permission.KEEP_BACKGROUND_RUNNING'));
   assert.deepEqual(module.abilities[0].backgroundModes, ['bluetoothInteraction']);
   assert.match(modeSource, /MUSIC_CONTROL_ENABLED: boolean = true;/);

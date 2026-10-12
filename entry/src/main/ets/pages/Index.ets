@@ -4,6 +4,7 @@ import { common } from '@kit.AbilityKit';
 import { webview } from '@kit.ArkWeb';
 import { FITNESS_LOGIN_URL, xiaomiLoginUrlAllowed } from '../core/MiFitnessCloud';
 import { MI_LOGIN_USER_AGENT } from '../platform/MiFitnessAccount';
+import { AVVolumePanel } from '@kit.AudioKit';
 
 @Entry
 @Component
@@ -290,12 +291,16 @@ struct Index {
     Column({ space: 8 }) {
       this.row('状态同步收包', this.view.musicSynced.toString())
       this.row('手机接受控制', this.view.musicControlled.toString())
+      this.row('最近操作耗时', this.view.musicControlMs + ' ms')
       if (this.view.musicCommandCode !== 0) {
-        this.note(this.view.musicCommandCode === 201 ? '最近控制未获系统许可。手表调节手机音量需要额外系统权限，当前构建可能不可用。' :
+        this.note(this.view.musicCommandCode === -66 ? '系统限制后台调节音量。请保持腕间通知在手机前台再试。' :
+          this.view.musicCommandCode === -67 ? '系统音量未变化，本次未计为成功。请保持腕间通知在前台再试。' :
+          this.view.musicCommandCode === 201 ? '最近控制未获系统许可。' :
           '最近控制未完成，错误码：' + this.view.musicCommandCode + '。请确认播放器已开启并支持该操作。')
       }
     }.width('100%').padding(16).backgroundColor(this.surface()).borderRadius(16)
     this.note('先在手机开始播放，再打开手表的音乐控制页。没有活动媒体会话时会同步为空闲；卓易通内播放器是否开放会话需要实际测试。')
+    this.note('音量调整需腕间通知处于手机前台，并显示系统音量条；后台和锁屏下不支持系统音量调整。播放和切歌仍可在后台处理。')
     this.note('通知与音乐共用一个认证连接。关闭通知转发或进行诊断测试会同时暂停音乐控制；关闭本页音乐控制保留通知设置。系统会显示蓝牙持续任务通知。')
     this.entry('返回设置', '', AppCommand.DEVICE)
   }
@@ -462,6 +467,11 @@ struct Index {
             }
           }.width('100%').constraintSize({ maxWidth: 600 }).padding(16).alignItems(HorizontalAlign.Start)
         }.width('100%').layoutWeight(1)
+        if (this.view.musicEnabled && this.view.musicAvailable) {
+          // AVVolumePanel's host must not take the remaining Column height from the main Scroll.
+          // Its default system popup stays visible when volume actually changes.
+          AVVolumePanel({ volumeLevel: this.view.systemVolumeLevel }).width('100%').height(48)
+        }
       }.width('100%').height('100%').backgroundColor(this.pageColor())
     }
   }

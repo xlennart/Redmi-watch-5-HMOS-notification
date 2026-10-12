@@ -75,6 +75,8 @@ export class AppState {
   musicControlled: number = 0;
   musicCode: number = 0;
   musicCommandCode: number = 0;
+  systemVolumeLevel: number = 0;
+  musicControlMs: number = 0;
 
   copy(): AppState {
     const next = new AppState();
@@ -101,6 +103,7 @@ export class AppState {
     next.musicAvailable = this.musicAvailable;
     next.musicSynced = this.musicSynced; next.musicControlled = this.musicControlled;
     next.musicCode = this.musicCode; next.musicCommandCode = this.musicCommandCode;
+    next.systemVolumeLevel = this.systemVolumeLevel; next.musicControlMs = this.musicControlMs;
     return next;
   }
 }

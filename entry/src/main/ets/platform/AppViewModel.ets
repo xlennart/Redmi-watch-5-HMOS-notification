@@ -18,6 +18,8 @@ import { WatchChannelProbe, WatchChannelError } from './WatchChannelProbe';
 import { WatchTestSession } from './WatchTestSession';
 import { AppNotificationIcon } from './AppNotificationIcon';
 import { WatchNotificationRelay } from './WatchNotificationRelay';
+import { MusicVolumeBridge } from './MusicVolumeBridge';
+import { audio } from '@kit.AudioKit';
 
 // Owns platform calls and sensitive temporary candidates. Pages receive only AppState snapshots.
 export class AppViewModel {
@@ -36,6 +38,12 @@ export class AppViewModel {
   private channelProbe: WatchChannelProbe | undefined = undefined;
   private testSession: WatchTestSession | undefined = undefined;
   private poll: number = -1;
+  private unbindVolume: (() => void) | undefined = undefined;
+  private volumeManager: audio.AudioVolumeManager = audio.getAudioManager().getVolumeManager();
+  private volumeChanged: (event: audio.StreamVolumeEvent) => void = (event) => {
+    if (this.disposed) return;
+    this.current.systemVolumeLevel = event.volume; this.publish();
+  };
   private loginResolve: ((payload: string) => void) | undefined = undefined;
   private loginReject: ((reason: MiAccountSyncError) => void) | undefined = undefined;
   private loginCaptureRunning: boolean = false;
@@ -52,6 +60,12 @@ export class AppViewModel {
     this.current.revision++; this.listener(this.current.copy());
   }
   initialize(): void {
+    try { this.current.systemVolumeLevel = audio.getAudioManager().getVolumeManager().getVolumeByStream(audio.StreamUsage.STREAM_USAGE_MUSIC); } catch (_) { }
+    this.unbindVolume = MusicVolumeBridge.bind((level: number) => {
+      if (this.disposed) return;
+      this.current.systemVolumeLevel = level; this.publish();
+    });
+    try { this.volumeManager.on('streamVolumeChange', audio.StreamUsage.STREAM_USAGE_MUSIC, this.volumeChanged); } catch (_) { }
     this.context.eventHub.on('wrist.foreground', this.foreground);
     this.restoreSelection(); this.readStats(); this.publish();
     this.execute('refresh', () => this.refresh()).catch(() => {});
@@ -84,6 +98,7 @@ export class AppViewModel {
     this.current.musicStage = this.current.musicEnabled && Date.now() - music.updatedMs > 8000 ? 'unknown' : music.stage;
     this.current.musicSynced = music.synced; this.current.musicControlled = music.controlled;
     this.current.musicCode = music.lastCode; this.current.musicCommandCode = music.commandCode;
+    this.current.musicControlMs = music.controlMs;
     this.current.lastAcknowledged = stats.acknowledged > 0;
     // No current connection stage can be inferred from an old cumulative counter.
   }
@@ -157,6 +172,8 @@ export class AppViewModel {
     clearMiFitnessAccountSession(); this.current.route = route; this.current.notice = ''; this.current.noticeFailed = false;
   }
   dispose(): void {
+    try { this.volumeManager.off('streamVolumeChange', this.volumeChanged); } catch (_) { }
+    this.unbindVolume?.(); this.unbindVolume = undefined;
     this.disposed = true; clearInterval(this.poll); this.cancelPending(); this.clearCandidates();
     this.context.eventHub.off('wrist.foreground', this.foreground); clearMiFitnessAccountSession();
   }
@@ -450,6 +467,7 @@ export class AppViewModel {
             this.current.diagnosticResult += command === AppCommand.TEST_VIBRATION ? '\n请确认手表是否短震两次。' : '\n请查看手表通知中心是否出现“腕间通知测试”。';
           }
         } finally {
+          try { new RelayStore(this.context.filesDir).setTestIcon(session.iconStatus, session.iconReason); } catch (_) { }
           if (epoch === this.operationEpoch) {
             this.current.diagnosticIconStatus = session.iconStatus; this.current.diagnosticIconReason = session.iconReason;
           }
