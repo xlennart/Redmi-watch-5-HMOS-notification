@@ -9,9 +9,10 @@ export interface NotificationIconTransport {
   md5: (bytes: Uint8Array) => Promise<Uint8Array>;
 }
 
-// Raw formats observed in Xiaomi notification-icon requests. No guessed compressed formats.
+// Xiaomi's icon file writer uses RGB565 for format 4 as well as 0. Formats 7/8
+// use the same RGB565 channels, with LE/BE byte order respectively, followed by alpha.
 export function iconBytesPerPixel(format: number): number {
-  if (format === 0 || format === 1) return 2;
+  if (format === 0 || format === 1 || format === 4) return 2;
   if (format === 2 || format === 3) return 4;
   if (format === 7 || format === 8) return 3;
   throw new Error('ICON_FORMAT');
@@ -55,10 +56,10 @@ export function encodeWatchIcon(bgra: Uint8Array, width: number, height: number,
       if (format === 2 || format === 3) {
         result.set([b, g, r, alpha], dest);
       } else {
-        const swapped = format === 8;
-        const rgb = ((swapped ? b : r) >> 3) << 11 | (g >> 2) << 5 | ((swapped ? r : b) >> 3);
-        result[dest] = format === 1 ? rgb >> 8 : rgb & 255;
-        result[dest + 1] = format === 1 ? rgb & 255 : rgb >> 8;
+        const bigEndian = format === 1 || format === 8;
+        const rgb = (r >> 3) << 11 | (g >> 2) << 5 | (b >> 3);
+        result[dest] = bigEndian ? rgb >> 8 : rgb & 255;
+        result[dest + 1] = bigEndian ? rgb & 255 : rgb >> 8;
         if (bpp === 3) result[dest + 2] = alpha;
       }
     }
@@ -143,7 +144,11 @@ export class NotificationIconExchange {
       try {
         if (fieldInt(response, 1) === 2) { this.status = 'cached'; this.reason = 'watch_cached'; return true; }
         if (fieldInt(response, 1) !== 0) { this.status = 'unsupported'; this.reason = 'prepare_status_' + fieldInt(response, 1); return true; }
-        const side = fieldInt(response, 3); const format = fieldInt(response, 2); const compression = fieldInt(response, 4);
+        const side = fieldInt(response, 3);
+        // Optional enum support_image_format defaults to RGB565 (0). The official
+        // protobuf writer omits this field for 0; absence is not an unknown format.
+        const format = response.some(item => item.id === 2) ? fieldInt(response, 2) : 0;
+        const compression = fieldInt(response, 4);
         try { validateIconSize(side); if (format !== 6) iconBytesPerPixel(format); }
         catch (_) { this.status = 'unsupported'; this.reason = 'format_' + format + '_size_' + side; return true; }
         if (compression > 0) { this.status = 'unsupported'; this.reason = 'compression_' + compression; return true; }

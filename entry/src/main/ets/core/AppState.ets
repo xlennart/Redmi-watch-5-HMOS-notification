@@ -5,7 +5,8 @@ export enum AppCommand {
   IMPORT, CANCEL_IMPORT, SAVE_CANDIDATE, DISCARD_CANDIDATE,
   AUTHORIZE, NEXT_STEP, PREVIOUS_STEP, ACCOUNT_LOGIN, ACCOUNT_SYNC, CLOSE_LOGIN,
   DELETE_CREDENTIAL, UNSUBSCRIBE, CHECK_CHANNEL, TEST_NOTIFICATION, TEST_VIBRATION,
-  ENABLE_CATEGORIES, CONFIRM_VISIBLE, CONFIRM_NOT_VISIBLE, QUICK_TEST, MATERIAL
+  ENABLE_CATEGORIES, CONFIRM_VISIBLE, CONFIRM_NOT_VISIBLE, QUICK_TEST, MATERIAL,
+  MUSIC, START_MUSIC, STOP_MUSIC
 }
 export class DeviceCandidateView {
   reference: number;
@@ -67,6 +68,13 @@ export class AppState {
   loginVisible: boolean = false;
   loginSensitivePage: boolean = false;
   loginNotice: string = '请在小米官方页面完成登录与验证码，然后点击同步。';
+  musicEnabled: boolean = false;
+  musicAvailable: boolean = false;
+  musicStage: string = 'off';
+  musicSynced: number = 0;
+  musicControlled: number = 0;
+  musicCode: number = 0;
+  musicCommandCode: number = 0;
 
   copy(): AppState {
     const next = new AppState();
@@ -89,6 +97,10 @@ export class AppState {
     next.diagnosticIconStatus = this.diagnosticIconStatus; next.diagnosticIconReason = this.diagnosticIconReason;
     next.notice = this.notice; next.noticeFailed = this.noticeFailed; next.large = this.large;
     next.loginVisible = this.loginVisible; next.loginSensitivePage = this.loginSensitivePage; next.loginNotice = this.loginNotice;
+    next.musicEnabled = this.musicEnabled; next.musicStage = this.musicStage;
+    next.musicAvailable = this.musicAvailable;
+    next.musicSynced = this.musicSynced; next.musicControlled = this.musicControlled;
+    next.musicCode = this.musicCode; next.musicCommandCode = this.musicCommandCode;
     return next;
   }
 }

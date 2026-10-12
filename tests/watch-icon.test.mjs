@@ -29,10 +29,51 @@ test('known pixels use negotiated RGB565 endianness and alpha-bearing channel la
   assert.deepEqual([...encodeWatchIcon(red, 1, 1, 1, 0, false)], [0, 248]);
   assert.deepEqual([...encodeWatchIcon(red, 1, 1, 1, 1, false)], [248, 0]);
   assert.deepEqual([...encodeWatchIcon(red, 1, 1, 1, 7, false)], [0, 248, 255]);
-  assert.deepEqual([...encodeWatchIcon(red, 1, 1, 1, 8, false)], [31, 0, 255]);
+  assert.deepEqual([...encodeWatchIcon(red, 1, 1, 1, 8, false)], [248, 0, 255]);
+  assert.deepEqual([...encodeWatchIcon(red, 1, 1, 1, 4, false)], [0, 248]);
   const semitransparent = new Uint8Array([16, 32, 64, 128]);
   assert.deepEqual([...encodeWatchIcon(semitransparent, 1, 1, 1, 3, true)], [32, 64, 128, 128]);
   assert.deepEqual([...encodeWatchIcon(new Uint8Array([10, 20, 30, 0]), 1, 1, 1, 2, true)], [0, 0, 0, 0]);
+});
+
+test('official icon alpha-565 vectors distinguish byte order from a red-blue channel swap', () => {
+  // BGRA input: unequal R/G/B values expose both byte-order and channel mistakes.
+  const source = new Uint8Array([56, 100, 200, 255, 248, 4, 8, 255]);
+  const little = encodeWatchIcon(source, 2, 1, 2, 7, false);
+  const big = encodeWatchIcon(source, 2, 1, 2, 8, false);
+  assert.deepEqual([...little.subarray(0, 6)], [39, 203, 255, 63, 8, 255]);
+  assert.deepEqual([...big.subarray(0, 6)], [203, 39, 255, 8, 63, 255]);
+  assert.equal(little.length, 12); assert.equal(big.length, 12);
+});
+
+test('format 4 follows the official notification RGB565 writer instead of invented RGB888 bytes', async () => {
+  const f = fixture();
+  const bytes = new Uint8Array(8).fill(127);
+  const exchange = new NotificationIconExchange(name, { async load(side, format) {
+    assert.equal(side, 2); assert.equal(format, 4); return bytes;
+  } }, f.transport);
+  await exchange.request(); await exchange.handle(15, ready(2, 4));
+  assert.equal(exchange.status, 'uploaded'); assert.equal(bytes.some(Boolean), false);
+  const request = readProto(fieldBytes(readProto(fieldBytes(readProto(f.commands[1]), 24)), 1));
+  assert.equal(fieldInt(request, 3), 8);
+});
+
+test('official protobuf omission of zero-valued image format still negotiates RGB565', async () => {
+  const f = fixture();
+  const bytes = new Uint8Array([0, 248, 224, 7, 31, 0, 255, 255]);
+  const exchange = new NotificationIconExchange(name, { async load(side, format) {
+    assert.equal(side, 2); assert.equal(format, 0); return bytes;
+  } }, f.transport);
+  await exchange.request();
+  // oli.j writes required status=0 and size=2, but omits optional format=0 and compression=0.
+  await exchange.handle(15, protoBytes(15, joinBytes([protoInt(1, 0), protoInt(3, 2), protoInt(5, 64)])));
+  assert.equal(exchange.status, 'uploaded'); assert.ok(f.chunks.length > 0);
+  const payload = Buffer.concat(f.chunks.map(chunk => Buffer.from(chunk.subarray(4))));
+  assert.deepEqual([...payload.subarray(22, 30)], [0, 248, 224, 7, 31, 0, 255, 255]);
+  assert.equal(bytes.some(Boolean), false);
+  const invalid = fixture(); await invalid.exchange.request();
+  await invalid.exchange.handle(15, protoBytes(15, joinBytes([protoInt(1, 0), protoBytes(2, new Uint8Array([0])), protoInt(3, 2)])));
+  assert.equal(invalid.exchange.status, 'unsupported'); assert.equal(invalid.calls(), 0);
 });
 
 test('non-square icons retain aspect ratio and reject oversized or unknown formats', () => {

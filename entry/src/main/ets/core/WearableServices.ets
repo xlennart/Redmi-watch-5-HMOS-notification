@@ -1,4 +1,4 @@
-// Service contracts for the phone companion. Optional services have no runtime implementation yet.
+// Companion service contracts. Phone media has a native adapter; health and resource services remain contracts.
 import { WearableFeature, WearableDataProvider } from './WearableData';
 
 export enum WearableConnectionStage {

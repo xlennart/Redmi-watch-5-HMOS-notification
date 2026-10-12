@@ -20,8 +20,9 @@ for (const file of files.filter(p => /\.(json|json5)$/.test(p))) {
 const read = path => parsed.get(`${root}${path}`);
 const module = read('entry/src/main/module.json5').module;
 const modeSource = readFileSync(`${root}entry/src/main/ets/config/ProbeMode.ets`, 'utf8');
-const enabled = modeSource.includes('= true;');
-const expected = configuration(enabled ? 'notifications' : 'baseline');
+const enabled = modeSource.includes('NOTIFICATION_PROBE_ENABLED: boolean = true;');
+const musicEnabled = modeSource.includes('MUSIC_CONTROL_ENABLED: boolean = true;');
+const expected = configuration(musicEnabled ? 'notifications-music' : enabled ? 'notifications' : 'baseline');
 assert.deepEqual(module, JSON.parse(expected.manifest).module, 'Manifest must match selected mode');
 assert.equal(modeSource.replaceAll('\r\n', '\n'), expected.modeSource,
   'Mode flag must match generated configuration');
@@ -53,5 +54,5 @@ assert.equal(profile.app.products[0].compatibleSdkVersion, '26.0.0');
 assert.equal(read('oh-package.json5').modelVersion, read('hvigor/hvigor-config.json5').modelVersion);
 const pages = read('entry/src/main/resources/base/profile/main_pages.json').src;
 for (const page of pages) assert.ok(existsSync(`${root}entry/src/main/ets/${page}.ets`));
-console.log(`Project integrity passed: ${parsed.size} JSON/JSON5 files, resource references and ${enabled ? 'notifications' : 'baseline'} mode.`);
+console.log(`Project integrity passed: ${parsed.size} JSON/JSON5 files, resource references and ${musicEnabled ? 'notifications-music' : enabled ? 'notifications' : 'baseline'} mode.`);
 console.log('ArkTS compilation, ACL signing and device behavior are not validated by this check.');

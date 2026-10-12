@@ -81,7 +81,7 @@ struct Index {
     if (this.view.connection === 'connecting') return '消息通道正在连接';
     if (this.view.connection === 'authenticating') return '消息通道正在认证';
     if (this.view.connection === 'disconnected') return '最近消息通道连接失败';
-    return this.view.sessionBusy ? '正在处理新通知' : '新通知到来时连接手表';
+    return this.view.sessionBusy ? this.view.musicEnabled ? '通知与音乐共用认证连接' : '正在处理新通知' : '新通知到来时连接手表';
   }
   private issueTitle(): string {
     if (!this.view.notificationMode) return '当前构建不支持通知订阅';
@@ -161,11 +161,12 @@ struct Index {
     if (this.view.route === 'device') return '设置';
     if (this.view.route === 'setup') return '设置通知转发';
     if (this.view.route === 'diagnostics') return '问题排查';
+    if (this.view.route === 'music') return '手机音乐控制';
     return '腕间通知';
   }
   private sendTest(): void {
-    if (this.view.relayEnabled || this.view.sessionBusy) {
-      this.confirm('暂停转发并测试？', '测试期间暂停新通知转发。测试结束后可点击“继续通知转发”。', AppCommand.QUICK_TEST);
+    if (this.view.relayEnabled || this.view.musicEnabled || this.view.sessionBusy) {
+      this.confirm('暂停连接并测试？', '测试期间暂停通知转发和音乐控制。测试结束后需分别手动开启。', AppCommand.QUICK_TEST);
     } else this.send(AppCommand.QUICK_TEST);
   }
   private readyToTest(): boolean { return this.view.hasDevice && this.view.supported && this.view.material && !this.busy(); }
@@ -188,7 +189,7 @@ struct Index {
       Text(this.relayDescription()).fontSize(14).fontColor(this.muted()).lineHeight(22)
       this.action(this.relayLabel(), this.view.relayEnabled ? AppCommand.STOP_RELAY : AppCommand.START_RELAY,
         true, this.view.relayEnabled ? this.view.pendingKind !== 'stop' : !this.busy())
-      if (this.view.sessionBusy) { this.note('正在处理新通知…') }
+      if (this.view.sessionBusy) { this.note(this.view.musicEnabled ? '通知与音乐共用连接，正在保持。' : '正在处理新通知…') }
     }.width('100%').padding(20).backgroundColor(this.surface()).borderRadius(18).alignItems(HorizontalAlign.Start)
     if (this.issueTitle().length > 0 && this.view.hasDevice) {
       Column({ space: 8 }) {
@@ -243,6 +244,7 @@ struct Index {
       this.entry('重新选择手表', '', AppCommand.CHANGE_DEVICE)
       this.entry('管理认证材料', this.view.material ? '已保存' : '待导入', AppCommand.MATERIAL)
     }.width('100%').padding(12).backgroundColor(this.surface()).borderRadius(16)
+    this.entry('手机音乐控制', this.view.musicEnabled ? '已开启' : '已关闭', AppCommand.MUSIC)
     this.entry('检查当前状态', '', AppCommand.REFRESH)
     this.entry('问题排查', '', AppCommand.DIAGNOSTICS)
     Column({ space: 12 }) {
@@ -256,6 +258,46 @@ struct Index {
           this.confirm('删除认证材料？', '会先停止转发，再删除本应用的认证材料。之后需重新导入。', AppCommand.DELETE_CREDENTIAL);
         })
     }.width('100%').padding(16).backgroundColor(this.surface()).borderRadius(16).alignItems(HorizontalAlign.Start)
+  }
+  private musicStatus(): string {
+    if (this.view.pendingKind === 'music-start') return '正在连接与认证';
+    if (!this.view.musicEnabled) return this.view.musicStage === 'permission_required' ? '需要重新授权' : '音乐控制已关闭';
+    if (this.view.musicStage === 'ready') return '音乐通道已连接';
+    if (this.view.musicStage === 'connecting') return '正在连接手表';
+    if (this.view.musicStage === 'retry') return '连接中断，正在重连';
+    return '连接状态待确认';
+  }
+  @Builder
+  private music() {
+    this.title('用手表控制手机播放', '支持接入系统媒体会话的音乐与视频应用。')
+    if (!this.view.musicAvailable) {
+      this.note('当前通知安装包未包含媒体会话 ACL 权限。获准并安装音乐模式构建后才能开启；通知功能仍可使用。')
+    }
+    Column({ space: 14 }) {
+      Text(this.deviceName()).fontSize(14).fontColor(this.muted())
+      Text(this.musicStatus()).fontSize(21).fontWeight(FontWeight.Bold).fontColor(this.ink())
+      this.note('开启后同步当前曲目、播放状态、进度和音量，并接收播放、暂停、上一首、下一首命令。')
+      this.action(this.view.pendingKind === 'music-start' ? '取消连接' : this.view.musicEnabled ? '关闭音乐控制' : '开启音乐控制',
+        this.view.pendingKind === 'music-start' || this.view.musicEnabled ? AppCommand.STOP_MUSIC : AppCommand.START_MUSIC,
+        true, this.view.pendingKind === 'music-start' || !this.busy())
+      if (this.view.musicEnabled && this.view.musicStage === 'unknown') {
+        this.action('重新连接', AppCommand.START_MUSIC, false, !this.busy())
+      }
+      if (this.view.musicCode !== 0 && this.view.musicStage !== 'ready') {
+        this.note('最近连接错误码：' + this.view.musicCode)
+      }
+    }.width('100%').padding(20).backgroundColor(this.surface()).borderRadius(18).alignItems(HorizontalAlign.Start)
+    Column({ space: 8 }) {
+      this.row('状态同步收包', this.view.musicSynced.toString())
+      this.row('手机接受控制', this.view.musicControlled.toString())
+      if (this.view.musicCommandCode !== 0) {
+        this.note(this.view.musicCommandCode === 201 ? '最近控制未获系统许可。手表调节手机音量需要额外系统权限，当前构建可能不可用。' :
+          '最近控制未完成，错误码：' + this.view.musicCommandCode + '。请确认播放器已开启并支持该操作。')
+      }
+    }.width('100%').padding(16).backgroundColor(this.surface()).borderRadius(16)
+    this.note('先在手机开始播放，再打开手表的音乐控制页。没有活动媒体会话时会同步为空闲；卓易通内播放器是否开放会话需要实际测试。')
+    this.note('通知与音乐共用一个认证连接。关闭通知转发或进行诊断测试会同时暂停音乐控制；关闭本页音乐控制保留通知设置。系统会显示蓝牙持续任务通知。')
+    this.entry('返回设置', '', AppCommand.DEVICE)
   }
   @Builder
   private diagnostics() {
@@ -408,6 +450,7 @@ struct Index {
             if (this.view.route === 'home' || this.view.route === 'notifications') { this.home() }
             else if (this.view.route === 'device') { this.device() }
             else if (this.view.route === 'setup') { this.setup() }
+            else if (this.view.route === 'music') { this.music() }
             else { this.diagnostics() }
             if (this.view.notice.length > 0 && this.view.testState !== 'running') {
               Text(this.view.notice).fontSize(13).fontColor(this.view.noticeFailed ? this.danger() : this.muted())

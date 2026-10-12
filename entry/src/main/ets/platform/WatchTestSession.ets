@@ -54,6 +54,37 @@ export class WatchTestSession {
   private listener: ((data: ArrayBuffer) => void) = (data: ArrayBuffer) => { this.receive(data); };
   private keyMaterial: Uint8Array = new Uint8Array();
   private deadline: number = 0;
+  private deferred: ProtoField[][] = [];
+  private lastMusicSequence: number = -1;
+  private lastMusicPayload: Uint8Array = new Uint8Array();
+  private notificationSettings: string = '';
+
+  async keepConnected(deviceId: string, ready: (session: WatchTestSession) => Promise<void>): Promise<void> {
+    await this.run(deviceId, () => {}, false, false, undefined, undefined, ready);
+  }
+  async sendApplication(command: Uint8Array): Promise<void> {
+    const sequence = await this.sendCommand(command, true);
+    const ack = await this.nextFrame(1, '等待手表指令收包', sequence); ack.payload.fill(0);
+  }
+  async nextApplication(timeoutMs: number = 250): Promise<ProtoField[]> {
+    if (this.deferred.length) return this.deferred.shift() || [];
+    try { return await this.applicationReply(await this.nextFrame(3, '等待手表事件', -1, timeoutMs)); }
+    catch (error) { if ((error as WatchChannelError).code === -23 && !this.failure && !this.closed) return []; throw error as WatchChannelError; }
+  }
+  private deferMusic(fields: ProtoField[]): void {
+    if (fieldInt(fields, 1) !== 18) return;
+    if (this.deferred.length >= 16) throw new WatchChannelError('手表控制队列已满', -24);
+    this.deferred.push(fields.map(item => new ProtoField(item.id, item.integer, item.bytes.slice())));
+  }
+  async sendNotification(notification: WatchNotificationContent, provider: NotificationIconProvider): Promise<void> {
+    this.iconStatus = 'notRequested'; this.iconReason = '';
+    if (!this.notificationSettings) this.notificationSettings = await this.checkNotificationSettings();
+    const settings = this.notificationSettings;
+    const icon = this.iconExchange(notification.packageName, provider);
+    try { await icon.request(); } catch (_) { icon.status = 'failed'; icon.reason = 'prepare_send'; }
+    await this.sendApplication(watchNotificationCommand(notification));
+    await this.observeTestResponses(() => {}, settings, icon, 4000);
+  }
 
   cancel(): void {
     this.closed = true; this.failure = new WatchChannelError('认证测试已取消', -21); this.wake?.();
@@ -156,7 +187,15 @@ export class WatchTestSession {
     const key = this.keyMaterial.slice(0, 16); const ciphertext = frame.payload.slice(2); let plain: Uint8Array = new Uint8Array();
     try {
       plain = frame.payload[1] === 2 ? await aes(key, key, ciphertext, false, false) : ciphertext.slice();
-      return readProto(plain);
+      const fields = readProto(plain);
+      if (fieldInt(fields, 1) === 18) {
+        // Media controls are accepted only from the authenticated encrypted application channel.
+        if (frame.payload[1] !== 2 || (frame.sequence === this.lastMusicSequence && equalBytes(this.lastMusicPayload, frame.payload))) {
+          clearProto(fields); return [];
+        }
+        this.lastMusicSequence = frame.sequence; this.lastMusicPayload.fill(0); this.lastMusicPayload = frame.payload.slice();
+      }
+      return fields;
     } finally { key.fill(0); ciphertext.fill(0); plain.fill(0); frame.payload.fill(0); }
   }
 
@@ -169,6 +208,7 @@ export class WatchTestSession {
     while (Date.now() < until) {
       const fields = await this.applicationReply(await this.nextFrame(3, '等待图标上传准备', -1, until - Date.now()));
       try {
+        this.deferMusic(fields);
         if (fieldInt(fields, 1) === 7 && fieldInt(fields, 2) === 0 && fieldInt(fields, 100) > 0) {
           this.failure = new WatchChannelError('手表应用拒绝通知', -38); throw this.failure;
         }
@@ -206,6 +246,7 @@ export class WatchTestSession {
     while (Date.now() < until) {
       const fields = await this.applicationReply(await this.nextFrame(3, '验证加密通知配置回应', -1, until - Date.now()));
       try {
+        this.deferMusic(fields);
         if (fieldInt(fields, 1) !== 7 || fieldInt(fields, 2) !== 6) continue;
         if (fieldInt(fields, 100) > 0) throw new WatchChannelError('手表拒绝通知配置查询', -37);
         const notification = readProto(fieldBytes(fields, 9));
@@ -228,6 +269,7 @@ export class WatchTestSession {
       catch (error) { if ((error as WatchChannelError).code === -23 && !this.failure) return '应用过滤策略未报告'; throw error as WatchChannelError; }
       const fields = await this.applicationReply(frame);
       try {
+        this.deferMusic(fields);
         if (fieldInt(fields, 1) !== 7 || fieldInt(fields, 2) !== 3) continue;
         const status = fieldInt(fields, 100);
         if (status > 0) return `应用策略查询被拒绝（${status}）`;
@@ -263,6 +305,7 @@ export class WatchTestSession {
       catch (error) { if ((error as WatchChannelError).code === -23 && !this.failure) break; throw error as WatchChannelError; }
       const fields = await this.applicationReply(frame);
       try {
+        this.deferMusic(fields);
         const type = fieldInt(fields, 1); const subtype = fieldInt(fields, 2); const status = fieldInt(fields, 100);
         if (type === 7 && subtype === 0 && status > 0) throw new WatchChannelError('手表应用拒绝测试提醒', -38);
         if (type === 7 && icon && (subtype === 15 || subtype === 16)) {
@@ -292,7 +335,8 @@ export class WatchTestSession {
 
   async run(deviceId: string, progress: (message: string) => void, enableNotifications: boolean = false,
     vibrationOnly: boolean = false, notification: WatchNotificationContent | undefined = undefined,
-    iconProvider: NotificationIconProvider | undefined = undefined): Promise<void> {
+    iconProvider: NotificationIconProvider | undefined = undefined,
+    ready: ((session: WatchTestSession) => Promise<void>) | undefined = undefined): Promise<void> {
     this.deadline = Date.now() + 60000;
     let credential: DeviceCredential | undefined = undefined;
     let secret = new Uint8Array(); let phone = new Uint8Array(); let stage = '读取本机认证材料';
@@ -351,6 +395,11 @@ export class WatchTestSession {
       try {
         if (fieldInt(device, 1) !== 1 && fieldInt(auth, 8) !== 1) throw new WatchChannelError('手表未确认认证成功', -34);
       } finally { result.fill(0); clearProto(auth); clearProto(device); }
+      if (ready) {
+        // Handshake remains bounded; the caller owns cancellation for a live shared session.
+        this.deadline = Number.MAX_SAFE_INTEGER;
+        await ready(this); return;
+      }
       if (vibrationOnly) {
         stage = '发送两次短震动测试';
         const sequence = await this.sendCommand(watchVibrationTestCommand(), true);
@@ -399,6 +448,8 @@ export class WatchTestSession {
       this.id = -1; this.keyMaterial.fill(0); secret.fill(0); phone.fill(0);
       if (credential) credential.authKey = '';
       this.decoder.clear(); this.versionDecoder.clear();
+      this.lastMusicPayload.fill(0);
+      for (let i = 0; i < this.deferred.length; i++) clearProto(this.deferred[i]); this.deferred = [];
       for (let i = 0; i < this.queue.length; i++) this.queue[i].payload.fill(0); this.queue = [];
     }
   }

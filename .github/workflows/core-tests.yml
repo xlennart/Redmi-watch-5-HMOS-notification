@@ -18,5 +18,7 @@ jobs:
       - run: npm test
       - run: npm run configure:notifications
       - run: npm run check
+      - run: npm run configure:music
+      - run: npm run check
       - run: npm run configure:baseline
       - run: git diff --exit-code -- entry/src/main/module.json5 entry/src/main/ets/config/ProbeMode.ets
