@@ -82,7 +82,7 @@ struct Index {
   private dividerColor(): ResourceColor { return $r('app.color.wrist_divider'); }
   private busy(): boolean { return this.view.pendingKind.length > 0 || this.diagnosticAfterStop !== undefined; }
   private deviceName(): string { return this.view.hasDevice ? this.view.deviceName : '尚未选择手表'; }
-  private permissionText(): string { return !this.view.permissionKnown ? '尚未确认' : this.view.permission ? '已允许' : '待恢复'; }
+  private permissionText(): string { return !this.view.permissionKnown ? '尚未确认' : this.view.permission ? '已允许' : '待授权'; }
   private sourceText(): string { return this.view.permissionKnown && this.view.permission ? this.view.sourceCount + ' 个获准应用 · 由系统管理' : '在系统授权页选择要转发的应用'; }
   private readyToTest(): boolean { return this.view.hasDevice && this.view.supported && this.view.material && !this.busy(); }
   private relayReady(): boolean {
@@ -95,7 +95,7 @@ struct Index {
     if (!this.view.supported) return '手表暂未适配';
     if (!this.view.material) return '还差一步';
     if (!this.view.permissionKnown) return '授权待确认';
-    if (!this.view.permission) return '需要恢复授权';
+    if (!this.view.permission) return '需要通知授权';
     return this.view.relayEnabled ? '转发已开启' : '转发已关闭';
   }
   private relayDescription(): string {
@@ -120,7 +120,7 @@ struct Index {
     if (!this.view.supported) return '这台手表暂未适配';
     if (!this.view.material) return '认证材料尚未准备';
     if (!this.view.permissionKnown) return '系统通知授权待确认';
-    if (!this.view.permission) return '系统通知权限已撤销';
+    if (!this.view.permission) return '需要允许系统通知';
     if (this.view.connection === 'disconnected') return '最近连接未完成';
     if (this.view.sourceCount === 0) return '还没有选择应用来源';
     return '';
