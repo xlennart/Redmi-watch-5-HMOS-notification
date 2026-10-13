@@ -163,7 +163,8 @@ export class AppViewModel {
   }
   private cancelPending(): void {
     const interrupted = this.current.pendingKind.length > 0;
-    if (this.current.pendingKind === 'test' && this.current.testState === 'running') this.current.testState = 'cancelled';
+    if ((this.current.pendingKind === 'test' || this.current.pendingKind === 'diagnostic') &&
+      this.current.testState === 'running') this.current.testState = 'cancelled';
     if (this.current.pendingKind === 'music-start') {
       WatchNotificationRelay.shared(this.context.filesDir, this.context.resourceManager).stopMusic().catch(() => {});
     }
@@ -426,7 +427,8 @@ export class AppViewModel {
   }
   private async quickTest(): Promise<void> {
     const epoch = this.operationEpoch;
-    this.current.testState = 'running'; this.current.confirmationRequired = false; this.current.notice = '';
+    this.current.testState = 'running'; this.current.testKind = 'notification';
+    this.current.confirmationRequired = false; this.current.notice = '';
     this.current.testPausedRelay = this.current.testPausedRelay || new RelayStore(this.context.filesDir).config().enabled;
     this.publish();
     try {
@@ -445,18 +447,30 @@ export class AppViewModel {
   }
   private async diagnose(command: AppCommand): Promise<void> {
     const epoch = this.operationEpoch;
-    const store = new RelayStore(this.context.filesDir);
-    if (store.config().enabled || store.config().musicEnabled || store.active()) { this.current.diagnosticResult = '通知或音乐仍占用通道，请明确停止并等待释放后重试。'; return; }
-    if (!this.current.supported || !this.selectedId || !await new WatchCredentialStore().present()) return;
-    if (epoch !== this.operationEpoch || this.disposed) return;
+    const channelOnly = command === AppCommand.CHECK_CHANNEL;
+    this.current.testState = channelOnly ? 'idle' : 'running';
+    this.current.testKind = command === AppCommand.TEST_VIBRATION ? 'vibration' : 'notification';
     this.current.confirmationRequired = false;
-    this.current.connection = 'connecting'; this.current.diagnosticResult = '正在检查消息通道…'; this.publish();
+    this.current.diagnosticIconStatus = 'notRequested'; this.current.diagnosticIconReason = '';
+    this.publish();
     try {
+      const store = new RelayStore(this.context.filesDir);
+      if (store.config().enabled || store.config().musicEnabled || store.active()) {
+        this.current.testState = channelOnly ? 'idle' : 'failed';
+        this.current.diagnosticResult = '通知或音乐仍占用通道，请明确停止并等待释放后重试。'; this.publish(); return;
+      }
+      const material = this.current.supported && this.selectedId ? await new WatchCredentialStore().present() : false;
+      if (epoch !== this.operationEpoch || this.disposed) return;
+      if (!material) {
+        this.current.testState = channelOnly ? 'idle' : 'failed';
+        this.current.diagnosticResult = '先选择已适配手表，并保存对应认证材料。'; this.publish(); return;
+      }
+      this.current.connection = 'connecting'; this.current.diagnosticResult = '正在检查消息通道…'; this.publish();
       if (command === AppCommand.CHECK_CHANNEL) {
         const probe = new WatchChannelProbe(); this.channelProbe = probe;
         try {
           const version = await probe.check(this.selectedId);
-          if (epoch === this.operationEpoch) this.current.diagnosticResult = `消息通道可通信，协议版本 ${version}；尚未完成密钥认证。`;
+          if (epoch === this.operationEpoch && !this.disposed) this.current.diagnosticResult = `消息通道可通信，协议版本 ${version}；尚未完成密钥认证。`;
         } finally { if (this.channelProbe === probe) this.channelProbe = undefined; }
       } else {
         const session = new WatchTestSession(); this.testSession = session;
@@ -466,22 +480,23 @@ export class AppViewModel {
             this.current.diagnosticResult = message; this.current.connection = 'authenticating'; this.publish();
           }, command === AppCommand.ENABLE_CATEGORIES, command === AppCommand.TEST_VIBRATION, undefined,
             new AppNotificationIcon(this.context.resourceManager, 'com.xlennart.wristnotifications'));
-          if (epoch === this.operationEpoch) {
+          if (epoch === this.operationEpoch && !this.disposed) {
             this.current.confirmationRequired = true;
             this.current.testState = 'awaiting'; this.current.testKind = command === AppCommand.TEST_VIBRATION ? 'vibration' : 'notification';
             this.current.diagnosticResult += command === AppCommand.TEST_VIBRATION ? '\n请确认手表是否短震两次。' : '\n请查看手表通知中心是否出现“腕间通知测试”。';
           }
         } finally {
           try { new RelayStore(this.context.filesDir).setTestIcon(session.iconStatus, session.iconReason); } catch (_) { }
-          if (epoch === this.operationEpoch) {
+          if (epoch === this.operationEpoch && !this.disposed) {
             this.current.diagnosticIconStatus = session.iconStatus; this.current.diagnosticIconReason = session.iconReason;
           }
           if (this.testSession === session) this.testSession = undefined;
         }
       }
     } catch (error) {
-      if (epoch === this.operationEpoch) {
+      if (epoch === this.operationEpoch && !this.disposed) {
         const failure = error as WatchChannelError;
+        this.current.testState = channelOnly ? 'idle' : 'failed'; this.current.confirmationRequired = false;
         this.current.diagnosticResult = `操作未完成。阶段：${failure.stage || '消息通道'}，错误码：${failure.code || -3}`;
       }
       throw error as WatchChannelError;
