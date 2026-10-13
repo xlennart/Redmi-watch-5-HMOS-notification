@@ -45,6 +45,7 @@ export class AppState {
   lastCode: number = 0;
   iconStatus: string = 'notRequested';
   iconReason: string = '';
+  iconResourceAccess: string = 'unknown';
   pendingKind: string = '';
   sessionBusy: boolean = false;
   step: number = 1;
@@ -88,6 +89,7 @@ export class AppState {
     next.connection = this.connection; next.lastAcknowledged = this.lastAcknowledged;
     next.received = this.received; next.acknowledged = this.acknowledged; next.failed = this.failed;
     next.dropped = this.dropped; next.lastCode = this.lastCode; next.iconStatus = this.iconStatus; next.iconReason = this.iconReason;
+    next.iconResourceAccess = this.iconResourceAccess;
     next.pendingKind = this.pendingKind; next.sessionBusy = this.sessionBusy; next.step = this.step;
     next.candidatesVisible = this.candidatesVisible;
     next.candidates = this.candidates.map(item => new DeviceCandidateView(item.reference, item.name, item.supported, item.detail));

@@ -336,7 +336,12 @@ struct Index {
       this.row('失败 / 跳过', this.view.failed + ' / ' + this.view.dropped)
       this.note('收包记录不能代替手表上的实际显示结果。')
       this.row('最近错误码', this.view.lastCode.toString())
-      Text('最近转发图标：' + this.view.iconStatus + ' · ' + this.view.iconReason).fontSize(13).fontColor(this.muted())
+      this.row('来源图标读取', this.view.iconResourceAccess === 'granted' ? '系统已许可' :
+        this.view.iconResourceAccess === 'denied' ? '系统未许可' : '尚未确认')
+      if (this.view.iconResourceAccess === 'denied') {
+        this.note('当前应用不能读取其他应用的图标，因此通知可能显示默认图标。系统通知授权开关不能授予这项能力。')
+      }
+      Text('最近一次图标处理：' + this.view.iconStatus + ' · ' + this.view.iconReason).fontSize(13).fontColor(this.muted())
       Text('本次测试图标：' + this.view.diagnosticIconStatus + ' · ' + this.view.diagnosticIconReason).fontSize(13).fontColor(this.muted())
     }.width('100%').padding(16).backgroundColor(this.surface()).borderRadius(16).alignItems(HorizontalAlign.Start)
   }

@@ -32,6 +32,8 @@
 
 ## 本轮证据
 
+2026-10-13 后续用户确认音乐控制灵敏很多；这说明按键等待链调整已有可见改善，仍不能替代每项命令、播放器和断线场景的验收。用户明确要求实用的后台音量控制，当前前台面板无法满足。再次核对目标 SDK，公开 C 音量管理器只有查询和回调；AVSession 普通控制命令不含音量，`setVolume` 属于投播控制，不是当前手机播放器。系统 `AudioVolumeGroupManager.setVolumeWithFlag` / `adjustSystemVolumeByStep` 属于系统接口，前者会拒绝非系统应用；当前普通调试签名无法据此承诺后台音量。见 [系统音量接口](https://github.com/openharmony/docs/blob/master/zh-cn/application-dev/reference/apis-audio-kit/js-apis-audio-sys.md)。未采用后台隐形面板或伪造播放会话规避限制。
+
 - 2026-10-13 共享核心及原生平台适配 mock 共 74 项测试通过，新增并发等待期间的加密控制路由、取消唤醒所有等待者、会话缓存、音量实际未变拒绝、前台绑定限制及 176 像素图标完整分片检查。
 - DevEco / CLT 26.0.0.851、API 26 原生编译、签名与 `hdc install -r` 覆盖安装成功。
 - 用户反馈首版音乐反应慢、音量无效；手机统计没有报错，不能证明操作生效。本轮已修复上述等待链和假成功路径，编译、签名并覆盖安装；响应改善待用户重新验收。

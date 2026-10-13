@@ -39,7 +39,13 @@ export class RelayStore {
   setActive(active: boolean): void { const activity = new RelayActivity(); activity.active = active; activity.updatedMs = Date.now(); this.write('relay-activity.json', JSON.stringify(activity)); }
   // UI writes config; extension writes stats. Neither file contains notification text or keys.
   setConfig(config: RelayConfig): void { this.write('relay-config.json', JSON.stringify(config)); }
-  setStats(stats: RelayStats): void { this.write('relay-stats.json', JSON.stringify(stats)); }
+  setStats(stats: RelayStats): void {
+    // A connection failure before icon negotiation must not erase the last concrete icon result.
+    if (stats.lastIconStatus === 'notRequested') {
+      const previous = this.stats(); stats.lastIconStatus = previous.lastIconStatus; stats.lastIconReason = previous.lastIconReason;
+    }
+    this.write('relay-stats.json', JSON.stringify(stats));
+  }
   music(): MusicRuntimeStats {
     try {
       const parsed = JSON.parse(fileIo.readTextSync(`${this.directory}/music-stats.json`)) as MusicRuntimeStats;

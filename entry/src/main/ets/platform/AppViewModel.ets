@@ -105,6 +105,11 @@ export class AppViewModel {
   private async refresh(): Promise<void> {
     const epoch = this.operationEpoch;
     this.readStats(); const material = await new WatchCredentialStore().present();
+    try {
+      this.current.iconResourceAccess = abilityAccessCtrl.createAtManager().checkAccessTokenSync(
+        this.context.applicationInfo.accessTokenId, 'ohos.permission.GET_BUNDLE_INFO') ===
+        abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED ? 'granted' : 'denied';
+    } catch (_) { this.current.iconResourceAccess = 'unknown'; }
     if (epoch !== this.operationEpoch || this.disposed) return;
     this.current.material = material;
     if (this.selectedId) {
