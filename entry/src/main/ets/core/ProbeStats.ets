@@ -3,6 +3,8 @@
 export class ProbeStats {
   schemaVersion: number = 1;
   received: number = 0;
+  liveViewReceived: number = 0;
+  liveViewWithText: number = 0;
   ignoredSelf: number = 0;
   cancelCallbacks: number = 0;
   cancelledItems: number = 0;
@@ -22,6 +24,8 @@ function increment(value: number, amount: number): number {
 export function cleanStats(input: ProbeStats): ProbeStats {
   const result = new ProbeStats();
   result.received = safeCounter(input.received);
+  result.liveViewReceived = Math.min(result.received, safeCounter(input.liveViewReceived));
+  result.liveViewWithText = Math.min(result.liveViewReceived, safeCounter(input.liveViewWithText));
   result.ignoredSelf = safeCounter(input.ignoredSelf);
   result.cancelCallbacks = safeCounter(input.cancelCallbacks);
   result.cancelledItems = safeCounter(input.cancelledItems);
@@ -42,13 +46,17 @@ export function decodeStats(text: string): ProbeStats {
 }
 
 export function receiveNotification(stats: ProbeStats, bundleName: string, ownBundleName: string,
-  observedAt: number): ProbeStats {
+  observedAt: number, isLiveView: boolean = false, hasText: boolean = false): ProbeStats {
   const result = cleanStats(stats);
   if (bundleName === ownBundleName) {
     result.ignoredSelf = increment(result.ignoredSelf, 1);
     return result;
   }
   result.received = increment(result.received, 1);
+  if (isLiveView) {
+    result.liveViewReceived = increment(result.liveViewReceived, 1);
+    if (hasText) result.liveViewWithText = increment(result.liveViewWithText, 1);
+  }
   result.lastBundleName = bundleName.slice(0, 256);
   result.lastReceivedAt = safeCounter(observedAt);
   return result;

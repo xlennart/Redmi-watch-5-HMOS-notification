@@ -39,6 +39,34 @@ export function offlineIconFileForPackage(bundleName: string): string {
     case 'com.umetrip.hm.app': return 'Umetrip.png';
     case 'com.huawei.hmos.wallet': return 'huawei/HuaweiWallet.png';
     case 'com.huawei.hms.payment': return 'huawei/HuaweiPay.png';
+    case 'com.tencent.qqmail.hmos': return 'brands/QQMail.png';
+    case 'com.tencent.weread.hmos': return 'brands/WeRead.png';
+    case 'com.tencent.meeting.app': return 'brands/TencentMeeting.png';
+    case 'com.tencent.imahm': return 'brands/TencentIma.png';
+    case 'com.intsig.camscanner.hap': return 'brands/CamScanner.png';
+    case 'com.icbc.harmonyclient': return 'brands/ICBC.png';
+    case 'com.bankabc.openharmonyapp.release': return 'brands/ABC.png';
+    case 'com.ccb.mobilebank.hm': return 'brands/CCB.png';
+    case 'com.boc.bocsoft.mbs.personal': return 'brands/BOC.png';
+    case 'com.cmbchina.harmony': return 'brands/CMB.png';
+    case 'com.netease.ohmail': return 'brands/NeteaseMail.png';
+    case 'cn.xuexi.qg4ohos': return 'brands/Xuexi.png';
+    case 'com.xuexitong.study': return 'brands/Xuexitong.png';
+    case 'cn.com.chsi.app': return 'brands/Chsi.png';
+    case 'com.unionpay.hmos.wallet': return 'brands/UnionPay.png';
+    case 'com.tmri.app.harmony12123': return 'brands/Traffic12123.png';
+    case 'com.alibaba.wireless_hmos': return 'brands/Alibaba.png';
+    case 'com.app.xt.retouch': return 'brands/Retouch.png';
+    case 'com.mutangtech.qianji.flthm': return 'brands/Qianji.png';
+    case 'com.htinns.application': return 'brands/Huazhu.png';
+    case 'com.wisedu.campus': return 'brands/Campus.png';
+    case 'com.jinrishuiyinxiangji.camera': return 'brands/Watermark.png';
+    case 'fun.wakeup.schedule': return 'brands/WakeUp.png';
+    case 'com.sakuraft.woodbox': return 'brands/WoodenLetter.png';
+    case 'com.liuzho.file.explorer.hmos': return 'brands/FileExplorer.png';
+    case 'com.liuzh.deviceinfo.hmos': return 'brands/DeviceInfo.png';
+    case 'com.sangfor.atrust.mobile': return 'brands/ATrust.png';
+    case 'cn.cyberIdentity.certificationharmonyos': return 'brands/NetworkIdentity.png';
     default: return '';
   }
 }

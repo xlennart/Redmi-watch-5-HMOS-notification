@@ -1,0 +1,266 @@
+{
+  "entries": [
+    {
+      "file": "brands/QQMail.png",
+      "bytes": 2910,
+      "sha256": "ea5718ce82f326c827ac6de52bc2e759864650956062faa61fcaf61694d0ab6e",
+      "source": "https://mail.qq.com/",
+      "download": "https://res.wx.qq.com/t/webmail/webmail/res/images/qqmail_favicon_96h.8d124a7.png",
+      "sourcePath": null,
+      "gitBlobSha1": null,
+      "rights": "Tencent brand artwork; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/WeRead.png",
+      "bytes": 3329,
+      "sha256": "dafc4328d3d04b6ebaf7724ff19ab955830444cd7f2b1dd1483c5d109a680be9",
+      "source": "https://weread.qq.com/",
+      "download": "https://rescdn.qqmail.com/node/wr/wrpage/style/images/independent/appleTouchIcon/apple-touch-icon-152x152.png",
+      "sourcePath": null,
+      "gitBlobSha1": null,
+      "rights": "Tencent brand artwork; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/TencentMeeting.png",
+      "bytes": 13689,
+      "sha256": "40f08c632268086cff8bbbbe6c292b95ccf5effbb1f7dfa9966592ed40df48c9",
+      "source": "https://meeting.tencent.com/",
+      "download": "https://cdn.meeting.tencent.com/assets/next-website/logo128.png",
+      "sourcePath": null,
+      "gitBlobSha1": null,
+      "rights": "Tencent brand artwork; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/CamScanner.png",
+      "bytes": 6263,
+      "sha256": "8cf838a08207597759506880e82136d260a5376a4d78d73e5ba39dcc4a482fff",
+      "source": "https://www.camscanner.com/",
+      "download": "https://static-cdn.camscanner.com/camscanner-seo/img/logo-192.8385d18.png",
+      "sourcePath": null,
+      "gitBlobSha1": null,
+      "rights": "CamScanner brand artwork; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/TencentIma.png",
+      "bytes": 9006,
+      "sha256": "c39c445d4c4c66599f5f75459f31c765ff8dc7da1d24eaea670288fb8c4ad81f",
+      "source": "https://ima.qq.com/",
+      "download": "https://m4.publicimg.browser.qq.com/publicimg/nav/ima/application_icon.png",
+      "sourcePath": null,
+      "gitBlobSha1": null,
+      "rights": "Tencent brand artwork; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/ICBC.png",
+      "bytes": 3004,
+      "sha256": "6a49f1e01332575c2fd5b8f3892d2969f6a254733a7731badae6b6c51ded6108",
+      "source": "https://github.com/cellier/bank-icon-cn",
+      "download": "https://api.github.com/repos/cellier/bank-icon-cn/git/blobs/3870b8c8a47afb34603dca3a645a0f55e5c7b8fd",
+      "sourcePath": "png/72/中国工商银行@3x.png",
+      "gitBlobSha1": "3870b8c8a47afb34603dca3a645a0f55e5c7b8fd",
+      "rights": "中国工商银行 brand artwork; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/CCB.png",
+      "bytes": 3009,
+      "sha256": "c1a1711a94ebb7e49d7494cb1d502a40f4bec8d30dc1e9f1cbd215c65fe233db",
+      "source": "https://github.com/cellier/bank-icon-cn",
+      "download": "https://api.github.com/repos/cellier/bank-icon-cn/git/blobs/1b412791b29b60663414ebf7a4f82c8c5eb34621",
+      "sourcePath": "png/72/中国建设银行@3x.png",
+      "gitBlobSha1": "1b412791b29b60663414ebf7a4f82c8c5eb34621",
+      "rights": "中国建设银行 brand artwork; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/CMB.png",
+      "bytes": 3590,
+      "sha256": "abf071f561028bac84e7bd07f53314623c6983810d328b6f7990e6ca11736017",
+      "source": "https://github.com/cellier/bank-icon-cn",
+      "download": "https://api.github.com/repos/cellier/bank-icon-cn/git/blobs/0486fa9af7dffbcec84d371e9a7f094888ede5e1",
+      "sourcePath": "png/72/招商银行@3x.png",
+      "gitBlobSha1": "0486fa9af7dffbcec84d371e9a7f094888ede5e1",
+      "rights": "招商银行 brand artwork; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/BOC.png",
+      "bytes": 3181,
+      "sha256": "718978d8d444321d356810841919aa81da590e5faf23fe1a0cad6e471dbcb024",
+      "source": "https://github.com/cellier/bank-icon-cn",
+      "download": "https://api.github.com/repos/cellier/bank-icon-cn/git/blobs/d9fec953f571a40e83082337a45c4c014ad2b044",
+      "sourcePath": "png/72/中国银行@3x.png",
+      "gitBlobSha1": "d9fec953f571a40e83082337a45c4c014ad2b044",
+      "rights": "中国银行 brand artwork; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/ABC.png",
+      "bytes": 2980,
+      "sha256": "cc023287b5a6d0187f9e8198a1791507b0655d593ee1e619e5b48f5cb351484d",
+      "source": "https://github.com/cellier/bank-icon-cn",
+      "download": "https://api.github.com/repos/cellier/bank-icon-cn/git/blobs/dfdef1f9234c0137a1fdacc7f6e180bb639eb8b2",
+      "sourcePath": "png/72/中国农业银行@3x.png",
+      "gitBlobSha1": "dfdef1f9234c0137a1fdacc7f6e180bb639eb8b2",
+      "rights": "中国农业银行 brand artwork; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/NeteaseMail.png",
+      "bytes": 7820,
+      "sha256": "19c037e1c4dbe66f1294656afbaeef627cf2e20ef39c4b71d19396574581b62b",
+      "source": "https://app.mi.com/details?id=com.netease.mail",
+      "download": "https://file.market.xiaomi.com/thumbnail/PNG/l114/AppStore/094341da00f83447e80af42fa600e66b3642ae0b1",
+      "sourceTitle": "网易邮箱大师-智能AI邮件助手",
+      "rights": "Application publisher brand artwork, catalogued by Xiaomi App Store; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/Xuexi.png",
+      "bytes": 7070,
+      "sha256": "5bd1fa680e7715e4ee80e49b8fc2638b1c9e75283062c8d4891b6dab4fc96d13",
+      "source": "https://app.mi.com/details?id=cn.xuexi.android",
+      "download": "https://file.market.xiaomi.com/thumbnail/PNG/l114/AppStore/0148555009c614dfc30cbbc98680a93b261746013",
+      "sourceTitle": "学习强国",
+      "rights": "Application publisher brand artwork, catalogued by Xiaomi App Store; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/Xuexitong.png",
+      "bytes": 10287,
+      "sha256": "d6619dd99dd7580be392cf7fe492637d8bd2915cd5e70999d92fc603aa91ffc1",
+      "source": "https://app.mi.com/details?id=com.chaoxing.mobile",
+      "download": "https://file.market.xiaomi.com/thumbnail/PNG/l114/AppStore/0af6e743a707647ccba9adbc700f8737e806ec397",
+      "sourceTitle": "学习通",
+      "rights": "Application publisher brand artwork, catalogued by Xiaomi App Store; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/Chsi.png",
+      "bytes": 7601,
+      "sha256": "596338b44a3d88b83335abf97ec51771a4682bf7a6192c8d4c9e2f9106f33609",
+      "source": "https://app.mi.com/details?id=cn.com.chsi.chsiapp",
+      "download": "https://file.market.xiaomi.com/thumbnail/PNG/l114/AppStore/0e52352b73a33e3cc4e141e37997d7630b840e4d7",
+      "sourceTitle": "学信网",
+      "rights": "Application publisher brand artwork, catalogued by Xiaomi App Store; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/UnionPay.png",
+      "bytes": 10102,
+      "sha256": "df46da6388574749b50ba461729026866d9abf9a2e25a5c0cafa026afbf967ec",
+      "source": "https://app.mi.com/details?id=com.unionpay",
+      "download": "https://file.market.xiaomi.com/thumbnail/PNG/l114/AppStore/0c7b074d87fd9497098deedd065587e6b11ef05df",
+      "sourceTitle": "云闪付",
+      "rights": "Application publisher brand artwork, catalogued by Xiaomi App Store; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/Traffic12123.png",
+      "bytes": 11626,
+      "sha256": "7f033acf3cb607d3303cfd2d237503a49c74233e54e3245d322b103d1185c88d",
+      "source": "https://app.mi.com/details?id=com.tmri.app.main",
+      "download": "https://file.market.xiaomi.com/thumbnail/PNG/l114/AppStore/0147d4f840bb71f347dc5f00cb09b71b22141b852",
+      "sourceTitle": "交管12123",
+      "rights": "Application publisher brand artwork, catalogued by Xiaomi App Store; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/Alibaba.png",
+      "bytes": 7079,
+      "sha256": "2eea65df341cc9c65c0f4fce1a3e4bdfa718b38c446c5683fac50a1e3df8830c",
+      "source": "https://app.mi.com/details?id=com.alibaba.wireless",
+      "download": "https://file.market.xiaomi.com/thumbnail/PNG/l114/AppStore/0e39f49bec5a74a00bdee139edbc741a447c7e48f",
+      "sourceTitle": "阿里巴巴",
+      "rights": "Application publisher brand artwork, catalogued by Xiaomi App Store; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/Retouch.png",
+      "bytes": 21474,
+      "sha256": "387e93b87d83beb823a098db19a4edf1220bf30dd73398dd7d96114f4ffb2b44",
+      "source": "https://app.mi.com/details?id=com.xt.retouch",
+      "download": "https://file.market.xiaomi.com/thumbnail/PNG/l114/AppStore/0d40400a13145426aa9bdcdce4eee6b6ff323d411",
+      "sourceTitle": "醒图",
+      "rights": "Application publisher brand artwork, catalogued by Xiaomi App Store; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/Qianji.png",
+      "bytes": 2621,
+      "sha256": "ec3538c4945b19421eb4eb7b9f80b455541063b496fcfe2c7dd2db2deb1137c7",
+      "source": "https://app.mi.com/details?id=com.mutangtech.qianji",
+      "download": "https://file.market.xiaomi.com/thumbnail/PNG/l114/AppStore/034351b40b33b4d04b9b862270280ad102c3c9e16",
+      "sourceTitle": "钱迹记账-无广告自动记账",
+      "rights": "Application publisher brand artwork, catalogued by Xiaomi App Store; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/Huazhu.png",
+      "bytes": 7945,
+      "sha256": "78f369469b95ab138d0ee378a3307b07f457d27d65e79fb13bc486dfbfafaa75",
+      "source": "https://app.mi.com/details?id=com.htinns",
+      "download": "https://file.market.xiaomi.com/thumbnail/PNG/l114/AppStore/00f15eef7b31e4770b787be6ccb06a0aebfd60b14",
+      "sourceTitle": "华住会-成就美好旅程",
+      "rights": "Application publisher brand artwork, catalogued by Xiaomi App Store; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/Campus.png",
+      "bytes": 5315,
+      "sha256": "7fc119414a088ea9f29ec67c138682c00ef579c5408fa1cbf00534fe6a7d6949",
+      "source": "https://app.mi.com/details?id=com.wisedu.cpdaily",
+      "download": "https://file.market.xiaomi.com/thumbnail/PNG/l114/AppStore/074b50693974e4813827ef593ebaf9afb17e2d395",
+      "sourceTitle": "今日校园",
+      "rights": "Application publisher brand artwork, catalogued by Xiaomi App Store; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/Watermark.png",
+      "bytes": 11397,
+      "sha256": "79afe4c1f6d3580463f14087d744acd75ca881547842c5997c98c840407280ce",
+      "source": "https://app.mi.com/details?id=com.xhey.xcamera",
+      "download": "https://file.market.xiaomi.com/thumbnail/PNG/l114/AppStore/07f4ffc7b2bda4565b1bfe1dde5366097eb3fb250",
+      "sourceTitle": "今日水印相机",
+      "rights": "Application publisher brand artwork, catalogued by Xiaomi App Store; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/WakeUp.png",
+      "bytes": 6457,
+      "sha256": "cb52b403793c0858e52b29f4e803b699391cb2d9554716dc69558dab38f43093",
+      "source": "https://app.mi.com/details?id=com.suda.yzune.wakeupschedule",
+      "download": "https://file.market.xiaomi.com/thumbnail/PNG/l114/AppStore/06086837e8e614861a77cdb4aa096dc5d5d5a3e3d",
+      "sourceTitle": "WakeUp课程表-超级好用的课程表",
+      "rights": "Application publisher brand artwork, catalogued by Xiaomi App Store; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/WoodenLetter.png",
+      "bytes": 1937,
+      "sha256": "1a56910fb4acf84d9bee5edbbae0f627a12544bbfd70a41898e86600d5baae2b",
+      "source": "https://app.mi.com/details?id=com.One.WoodenLetter",
+      "download": "https://file.market.xiaomi.com/thumbnail/PNG/l114/AppStore/0edf185a5cdcf417e0486cb9f924f1591e15b21fc",
+      "sourceTitle": "一个木函",
+      "rights": "Application publisher brand artwork, catalogued by Xiaomi App Store; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/FileExplorer.png",
+      "bytes": 7029,
+      "sha256": "63c2e4560b05499ac064e0b7d200083c4ee1787cc57d596b8791469d510014ed",
+      "source": "https://app.mi.com/details?id=com.liuzho.file.explorer",
+      "download": "https://file.market.xiaomi.com/thumbnail/PNG/l114/AppStore/0f519d22e5f9543059152602a6dc095bb7f4ffef7",
+      "sourceTitle": "流舟文件",
+      "rights": "Application publisher brand artwork, catalogued by Xiaomi App Store; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/DeviceInfo.png",
+      "bytes": 5047,
+      "sha256": "d0117f2b3095bd65a0f9a8b86e5863ca86c89d079c2cb1df95acafd4ffb7abf8",
+      "source": "https://app.mi.com/details?id=com.liuzh.deviceinfo",
+      "download": "https://file.market.xiaomi.com/thumbnail/PNG/l114/AppStore/0770a5bfffe6c72fabffbb5a8c577f6cdba41c510",
+      "sourceTitle": "设备信息X-by流舟",
+      "rights": "Application publisher brand artwork, catalogued by Xiaomi App Store; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/ATrust.png",
+      "bytes": 9671,
+      "sha256": "146824b869cd529e210421b1b9e40ea10130792236754c837bd9bc54323940c1",
+      "source": "https://app.mi.com/details?id=com.sangfor.atrust",
+      "download": "https://file.market.xiaomi.com/thumbnail/PNG/l114/AppStore/0161755c2e6b14c8f3381656a65768fbb9e867d7e",
+      "sourceTitle": "aTrust",
+      "rights": "Application publisher brand artwork, catalogued by Xiaomi App Store; source identification only; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "brands/NetworkIdentity.png",
+      "bytes": 6845,
+      "sha256": "a4c538b3540775cec898760c1c9f88d770c18268c415056b810def9994e6b19b",
+      "source": "https://app.mi.com/details?id=cn.cyberIdentity.certification",
+      "download": "https://file.market.xiaomi.com/thumbnail/PNG/l114/AppStore/03fd8441db94b4d5e93d5cc068433769b0459ca7a",
+      "sourceTitle": "国家网络身份认证",
+      "rights": "Application publisher brand artwork, catalogued by Xiaomi App Store; source identification only; not IconLibrary MIT licensed"
+    }
+  ]
+}

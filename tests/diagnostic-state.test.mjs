@@ -22,7 +22,7 @@ async function fixture({ material = true, active = false } = {}) {
   class WatchChannelProbe { async check() { calls.channel++; return 3; } cancel() {} }
   class WatchChannelError extends Error {}
   const ViewModel = await loadViewModel({ RelayStore, WatchCredentialStore, WatchTestSession, WatchChannelProbe, WatchChannelError,
-    AppNotificationIcon: class {}, clearMiFitnessAccountSession() {},
+    AppNotificationIcon: class {}, clearMiFitnessAccountSession() {}, MusicVolumeBridge: {setPanelVisible() {}},
     NOTIFICATION_PROBE_ENABLED: true, MUSIC_CONTROL_ENABLED: true,
     audio: { getAudioManager() { return { getVolumeManager() { return {}; } }; } } });
   const history = [];

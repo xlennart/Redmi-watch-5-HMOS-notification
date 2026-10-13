@@ -11,6 +11,8 @@ test('background and unbound pages cannot silently request system volume changes
   MusicVolumeBridge.setForeground(false);
   assert.throws(()=>MusicVolumeBridge.request(6),error=>error.code===-66);
   assert.deepEqual(levels,[]);
-  MusicVolumeBridge.setForeground(true);MusicVolumeBridge.request(6);assert.deepEqual(levels,[6]);
+  MusicVolumeBridge.setForeground(true);
+  assert.throws(()=>MusicVolumeBridge.request(6),error=>error.code===-66);
+  MusicVolumeBridge.setPanelVisible(true);MusicVolumeBridge.request(6);assert.deepEqual(levels,[6]);
   unbind();assert.throws(()=>MusicVolumeBridge.request(7),error=>error.code===-66);
 });

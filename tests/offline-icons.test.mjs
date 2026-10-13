@@ -7,7 +7,8 @@ import { offlineIconFileForPackage, validateOfflineIconPng } from '../.cloud-bui
 const base = new URL('../entry/src/main/resources/rawfile/notification-icons/', import.meta.url);
 const catalog = JSON.parse(readFileSync(new URL('catalog.json', base), 'utf8'));
 const huaweiCatalog = JSON.parse(readFileSync(new URL('huawei/catalog.json', base), 'utf8'));
-const artwork = [...catalog.entries, ...huaweiCatalog.entries];
+const brandCatalog = JSON.parse(readFileSync(new URL('brands/catalog.json', base), 'utf8'));
+const artwork = [...catalog.entries, ...huaweiCatalog.entries, ...brandCatalog.entries];
 
 test('offline catalog is complete, bounded and matches pinned artwork digests', () => {
   function walk(url, prefix = '') {
@@ -36,13 +37,18 @@ test('offline catalog is complete, bounded and matches pinned artwork digests', 
     assert.equal(new URL(item.source).hostname.endsWith('.huawei.com'), true);
     assert.match(item.rights, /Huawei/);
   }
+  for (const item of brandCatalog.entries) {
+    assert.equal(new URL(item.source).protocol, 'https:');
+    assert.match(item.rights, /brand artwork/);
+  }
 });
 
 test('exact package mapping never guesses from a lookalike name or treats a package as a path', () => {
   const packages = ['com.tencent.wechat', 'com.tencent.mm', 'com.tencent.mqq', 'com.alipay.mobile.client',
     'com.dingtalk.hmos', 'com.taobao.taobao4hmos', 'com.sankuai.hmeituan', 'com.tencent.hm.qqmusic',
     'com.huawei.hmos.wallet', 'com.huawei.hms.payment', 'com.amap.hmapp', 'com.netease.cloudmusic.hm',
-    'cn.wps.mobileoffice.hap', 'com.xingin.xhs_hos', 'yylx.danmaku.bili'];
+    'cn.wps.mobileoffice.hap', 'com.xingin.xhs_hos', 'yylx.danmaku.bili',
+    'com.tencent.qqmail.hmos', 'com.tencent.imahm', 'com.icbc.harmonyclient'];
   for (const pkg of packages) assert.ok(artwork.some(item => item.file === offlineIconFileForPackage(pkg)));
   assert.equal(offlineIconFileForPackage('com.tencent.wechat.fake'), '');
   assert.equal(offlineIconFileForPackage('../WeChat.png'), '');

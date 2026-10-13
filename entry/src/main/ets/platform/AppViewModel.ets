@@ -57,6 +57,7 @@ export class AppViewModel {
   snapshot(): AppState { return this.current.copy(); }
   private publish(): void {
     if (this.disposed) return;
+    MusicVolumeBridge.setPanelVisible(this.current.route === 'music' && this.current.musicEnabled && this.current.musicAvailable);
     this.current.revision++; this.listener(this.current.copy());
   }
   initialize(): void {
@@ -91,6 +92,7 @@ export class AppViewModel {
     const probe = new ProbeStore(this.context.filesDir).read();
     const store = new RelayStore(this.context.filesDir); const stats = store.stats();
     this.current.received = probe.received; this.current.acknowledged = stats.acknowledged;
+    this.current.liveViewReceived = probe.liveViewReceived; this.current.liveViewWithText = probe.liveViewWithText;
     this.current.failed = stats.failed; this.current.dropped = stats.dropped; this.current.lastCode = stats.lastCode;
     this.current.iconStatus = stats.lastIconStatus; this.current.iconReason = stats.lastIconReason; this.current.relayEnabled = store.config().enabled;
     this.current.sessionBusy = store.active();

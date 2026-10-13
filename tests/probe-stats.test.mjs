@@ -75,3 +75,15 @@ test('repeat notifications count callbacks without making an unsupported deliver
   assert.equal(repeat.received, 2);
   assert.equal(Object.hasOwn(repeat, 'deliveredToWatch'), false);
 });
+
+test('live-view observation stores only callback and text-presence counts, excludes self, and restores old storage', () => {
+  const old = decodeStats('{"schemaVersion":1,"received":3}');
+  assert.equal(old.liveViewReceived, 0); assert.equal(old.liveViewWithText, 0);
+  const empty = receiveNotification(old, 'example.delivery', 'bridge', 1, true, false);
+  const text = receiveNotification(empty, 'example.delivery', 'bridge', 2, true, true);
+  const own = receiveNotification(text, 'bridge', 'bridge', 3, true, true);
+  assert.equal(own.liveViewReceived, 2); assert.equal(own.liveViewWithText, 1);
+  assert.equal(own.received, 5); assert.equal(own.ignoredSelf, 1);
+  assert.deepEqual(decodeStats(JSON.stringify(own)), own);
+  assert.equal(Object.hasOwn(own, 'content'), false);
+});

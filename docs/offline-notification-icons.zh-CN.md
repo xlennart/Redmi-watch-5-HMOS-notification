@@ -1,5 +1,9 @@
 # 离线通知应用图标
 
+0.1.2 当前覆盖 64 个来源、65 个精确包名（含微信 Android 别名），423 张 PNG 合计 12235913 字节，约 11.67 MiB。新增 28 个来源，涵盖 QQ 邮箱、微信读书、腾讯会议、ima、网易邮箱大师、云闪付、五家银行、学习通/学习强国/学信网、交管 12123 等。`brands/catalog.json` 独立保留官方站点、小米应用商店或银行标识仓库的来源与摘要；`brands/NOTICE.md` 明确品牌权利与跨平台图标差异，不套用原图库 MIT 许可。全部 PNG 已做长度、摘要与尺寸检查。用户已确认上一批补充的图标在手表显示；新来源仍独立验收。
+
+下方 36 个来源、395 张图的统计与手机解码证据为 0.1.1 历史记录，不代表本轮新增来源已完成手表显示验证。
+
 2026-10-13 按用户要求尝试在线图标来源，统计体积后改为随应用保存离线图库。资源来自 [sooyaaabo/IconLibrary](https://github.com/sooyaaabo/IconLibrary) 的 App 目录，393 张 PNG 合计 11995983 字节，约 11.44 MiB；不是 393 个独立应用，部分是同一应用的不同版本。微信、QQ、支付宝三个文件共 87377 字节，约 85.3 KiB。
 
 资源保存在 `entry/src/main/resources/rawfile/notification-icons/`。根目录的 `catalog.json` 固定 IconLibrary 上游 tree 标识、每个文件长度和 SHA-256；下载时逐一比对上游 Git blob SHA-1。原始 MIT 许可放在同目录 `LICENSE.txt`，保留作者声明。另补充两张华为官方 PNG（共 41646 字节）：支付图标来自[官方设计资源](https://developer.huawei.com/consumer/cn/design/resource/)，钱包图标来自[官方钱包标识说明](https://consumer.huawei.com/cn/support/content/zh-cn16013292/)。`huawei/catalog.json` 单独记录下载来源和摘要，`huawei/NOTICE.md` 说明品牌权利；这两张图不适用 IconLibrary 的 MIT 许可。合计 395 张 PNG、12037629 字节。项目仅为通知来源识别使用图标，不表示获得品牌方背书，也不声称各平台应用的实时图标始终一致。

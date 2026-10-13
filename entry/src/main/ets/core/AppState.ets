@@ -39,6 +39,8 @@ export class AppState {
   connection: string = 'unknown';
   lastAcknowledged: boolean = false;
   received: number = 0;
+  liveViewReceived: number = 0;
+  liveViewWithText: number = 0;
   acknowledged: number = 0;
   failed: number = 0;
   dropped: number = 0;
@@ -88,6 +90,7 @@ export class AppState {
     next.notificationMode = this.notificationMode; next.relayEnabled = this.relayEnabled;
     next.connection = this.connection; next.lastAcknowledged = this.lastAcknowledged;
     next.received = this.received; next.acknowledged = this.acknowledged; next.failed = this.failed;
+    next.liveViewReceived = this.liveViewReceived; next.liveViewWithText = this.liveViewWithText;
     next.dropped = this.dropped; next.lastCode = this.lastCode; next.iconStatus = this.iconStatus; next.iconReason = this.iconReason;
     next.iconResourceAccess = this.iconResourceAccess;
     next.pendingKind = this.pendingKind; next.sessionBusy = this.sessionBusy; next.step = this.step;
