@@ -9,19 +9,21 @@ export interface NotificationIconTransport {
   md5: (bytes: Uint8Array) => Promise<Uint8Array>;
 }
 
-// Raw formats observed in Xiaomi notification-icon requests. No guessed compressed formats.
+// Xiaomi's icon file writer uses RGB565 for format 4 as well as 0. Formats 7/8
+// use the same RGB565 channels, with LE/BE byte order respectively, followed by alpha.
 export function iconBytesPerPixel(format: number): number {
-  if (format === 0 || format === 1) return 2;
+  if (format === 0 || format === 1 || format === 4) return 2;
   if (format === 2 || format === 3) return 4;
   if (format === 7 || format === 8) return 3;
   throw new Error('ICON_FORMAT');
 }
 export function validateIconSize(side: number): void {
-  if (!Number.isInteger(side) || side < 1 || side > 128) throw new Error('ICON_SIZE');
+  // Redmi Watch 5 requests 176px BGRA icons. Bound raw data to a 256px square.
+  if (!Number.isInteger(side) || side < 1 || side > 256) throw new Error('ICON_SIZE');
 }
 export function validateIconData(bytes: Uint8Array, side: number, format: number): void {
   validateIconSize(side);
-  if (bytes.length < 1 || bytes.length > 65536) throw new Error('ICON_LENGTH');
+  if (bytes.length < 1 || bytes.length > 262144) throw new Error('ICON_LENGTH');
   if (format !== 6) {
     if (bytes.length !== side * side * iconBytesPerPixel(format)) throw new Error('ICON_LENGTH');
     return;
@@ -55,10 +57,10 @@ export function encodeWatchIcon(bgra: Uint8Array, width: number, height: number,
       if (format === 2 || format === 3) {
         result.set([b, g, r, alpha], dest);
       } else {
-        const swapped = format === 8;
-        const rgb = ((swapped ? b : r) >> 3) << 11 | (g >> 2) << 5 | ((swapped ? r : b) >> 3);
-        result[dest] = format === 1 ? rgb >> 8 : rgb & 255;
-        result[dest + 1] = format === 1 ? rgb & 255 : rgb >> 8;
+        const bigEndian = format === 1 || format === 8;
+        const rgb = (r >> 3) << 11 | (g >> 2) << 5 | (b >> 3);
+        result[dest] = bigEndian ? rgb >> 8 : rgb & 255;
+        result[dest + 1] = bigEndian ? rgb & 255 : rgb >> 8;
         if (bpp === 3) result[dest + 2] = alpha;
       }
     }
@@ -71,7 +73,7 @@ export function iconPrepareCommand(packageName: Uint8Array): Uint8Array {
     protoBytes(14, joinBytes([protoBytes(1, packageName), protoInt(2, 0)])))]);
 }
 export function iconMassPrepareCommand(md5: Uint8Array, length: number): Uint8Array {
-  if (md5.length !== 16 || !Number.isInteger(length) || length < 1 || length > 65536) throw new Error('ICON_MASS');
+  if (md5.length !== 16 || !Number.isInteger(length) || length < 1 || length > 262144) throw new Error('ICON_MASS');
   const request = joinBytes([protoInt(1, 50), protoBytes(2, md5), protoInt(3, length), protoInt(4, 0)]);
   return joinBytes([protoInt(1, 22), protoInt(2, 0), protoBytes(24, protoBytes(1, request))]);
 }
@@ -88,14 +90,14 @@ export function iconCrc32(bytes: Uint8Array): number {
   return (crc ^ 0xffffffff) >>> 0;
 }
 export function iconMassPayload(bytes: Uint8Array, md5: Uint8Array): Uint8Array {
-  if (md5.length !== 16 || bytes.length < 1 || bytes.length > 65536) throw new Error('ICON_MASS');
+  if (md5.length !== 16 || bytes.length < 1 || bytes.length > 262144) throw new Error('ICON_MASS');
   const result = new Uint8Array(26 + bytes.length); result[1] = 50; result.set(md5, 2);
   const view = new DataView(result.buffer); view.setUint32(18, bytes.length, true); result.set(bytes, 22);
   view.setUint32(result.length - 4, iconCrc32(result.subarray(0, result.length - 4)), true); return result;
 }
 export function iconMassChunk(payload: Uint8Array, sliceLength: number, index: number): Uint8Array {
   // Slice length includes channel/op and the two uint16 part counters. Stay within negotiated 4096-byte frames.
-  if (!Number.isInteger(sliceLength) || sliceLength < 64 || sliceLength > 4096 || payload.length > 65562) throw new Error('ICON_SLICE');
+  if (!Number.isInteger(sliceLength) || sliceLength < 64 || sliceLength > 4096 || payload.length > 262170) throw new Error('ICON_SLICE');
   const partSize = sliceLength - 6; const total = Math.ceil(payload.length / partSize);
   if (!Number.isInteger(index) || index < 0 || index >= total) throw new Error('ICON_PART');
   const body = payload.subarray(index * partSize, Math.min(payload.length, (index + 1) * partSize));
@@ -143,13 +145,17 @@ export class NotificationIconExchange {
       try {
         if (fieldInt(response, 1) === 2) { this.status = 'cached'; this.reason = 'watch_cached'; return true; }
         if (fieldInt(response, 1) !== 0) { this.status = 'unsupported'; this.reason = 'prepare_status_' + fieldInt(response, 1); return true; }
-        const side = fieldInt(response, 3); const format = fieldInt(response, 2); const compression = fieldInt(response, 4);
+        const side = fieldInt(response, 3);
+        // Optional enum support_image_format defaults to RGB565 (0). The official
+        // protobuf writer omits this field for 0; absence is not an unknown format.
+        const format = response.some(item => item.id === 2) ? fieldInt(response, 2) : 0;
+        const compression = fieldInt(response, 4);
         try { validateIconSize(side); if (format !== 6) iconBytesPerPixel(format); }
         catch (_) { this.status = 'unsupported'; this.reason = 'format_' + format + '_size_' + side; return true; }
         if (compression > 0) { this.status = 'unsupported'; this.reason = 'compression_' + compression; return true; }
         let bytes: Uint8Array = new Uint8Array(); let digest: Uint8Array = new Uint8Array(); let payload: Uint8Array = new Uint8Array();
         let started = false; let finished = false;
-        const until = Date.now() + 8000;
+        const until = Date.now() + 30000;
         try {
           const loaded = await this.provider.load(side, format);
           if (!loaded) { this.status = 'unavailable'; this.reason = this.provider.reason || 'resource'; return true; }
@@ -182,7 +188,8 @@ export class NotificationIconExchange {
             const chunk = iconMassChunk(payload, sliceLength, i);
             try { await this.transport.sendChunk(chunk); } finally { chunk.fill(0); }
           }
-          finished = true; this.status = 'uploaded'; this.reason = 'transport_ack'; // No visible UI claim.
+          finished = true; this.status = 'uploaded';
+          this.reason = this.provider.reason === 'encoded_offline' ? 'offline_transport_ack' : 'transport_ack'; // No visible UI claim.
         } catch (_) { this.status = 'failed'; }
         finally {
           if (started && !finished && digest.length === 16) {

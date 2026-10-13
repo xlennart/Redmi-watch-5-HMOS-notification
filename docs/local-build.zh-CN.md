@@ -186,3 +186,8 @@ git stash pop
 ```
 
 如发生冲突，保留本机签名材料并核对云端工程变更，不要盲目覆盖。平台源码修改应先提交并同步，签名材料不能跟随这些提交。更新后需要通知测试时，重新切换 `configure:notifications`，再本地编译和签名。
+# 2026-10-12：音乐模式补充
+
+新增 `npm run configure:music`（notifications-music）。该模式除通知 ACL 外，还需官方调试 profile 的 allowed-acls 包含 `ohos.permission.MANAGE_MEDIA_RESOURCES_FOR_PUBLIC`。它是 system_grant ACL，不能用用户授权弹窗补齐。修改模式后，使用官方 `devecocli signature generate --product default` 更新本地 profile，再编译签名；保留原密钥库、别名、证书，以便覆盖安装保留数据。本机此链路已成功，签名材料不上传。详情与测试步骤见[手机音乐控制](phone-music-control.zh-CN.md)。
+
+基础及普通通知模式保持原有权限范围。云端提交前执行 `npm run configure:baseline` 并恢复无签名的 `build-profile.json5`。

@@ -1,49 +1,49 @@
 {
   "profile": {
-    "name": "wrist-notifications",
-    "version": "0.1.0",
-    "authority": "project-proposal",
-    "note": "项目建议值；不是华为官方规格；保留现有墨色与青绿产品方向。"
+    "name": "wrist-cleanwhite",
+    "version": "1.0.0",
+    "authority": "user-approved-project-design",
+    "note": "2026-10-13 用户选定静白；原生 UI 以 base/dark color.json 为实际资源。"
   },
   "font_family": "\"HarmonyOS Sans SC\",\"Microsoft YaHei\",system-ui,sans-serif",
   "colors": {
     "light": {
-      "page": "#F4F7F5",
+      "page": "#F6F6F3",
       "surface": "#FFFFFF",
-      "surface-alt": "#EDF3F0",
-      "text": "#172F35",
-      "muted": "#566970",
-      "line": "#D9E4DF",
-      "action": "#066B75",
-      "action-pressed": "#04515A",
+      "surface-alt": "#EEF2FC",
+      "text": "#182231",
+      "muted": "#636D7B",
+      "line": "#E8E9EA",
+      "action": "#2856D9",
+      "action-pressed": "#2046B1",
       "on-action": "#FFFFFF",
-      "action-surface": "#E1F2EF",
-      "success": "#236449",
-      "success-surface": "#E7F3E9",
-      "warning": "#82500E",
-      "warning-surface": "#FFF1DB",
-      "danger": "#AA352B",
-      "danger-surface": "#FCEBE8",
-      "overlay": "#122B3566"
+      "action-surface": "#EEF2FC",
+      "success": "#29704F",
+      "success-surface": "#EDF6EF",
+      "warning": "#835214",
+      "warning-surface": "#FFF4E0",
+      "danger": "#B33232",
+      "danger-surface": "#FCEEEE",
+      "overlay": "#070E1A88"
     },
     "dark": {
-      "page": "#111B1E",
-      "surface": "#1C2A2E",
-      "surface-alt": "#26373B",
-      "text": "#F0F6F3",
-      "muted": "#B2C6C4",
-      "line": "#42585A",
-      "action": "#80D9D6",
-      "action-pressed": "#A2E5E2",
-      "on-action": "#092D32",
-      "action-surface": "#243F41",
-      "success": "#8DDAAA",
-      "success-surface": "#254333",
-      "warning": "#F4C779",
-      "warning-surface": "#463720",
-      "danger": "#FFB2A6",
-      "danger-surface": "#482E2C",
-      "overlay": "#00000099"
+      "page": "#11151D",
+      "surface": "#1C2330",
+      "surface-alt": "#25334F",
+      "text": "#EDF1F7",
+      "muted": "#AEB8C8",
+      "line": "#303B4E",
+      "action": "#91AEFF",
+      "action-pressed": "#B5C8FF",
+      "on-action": "#142347",
+      "action-surface": "#25334F",
+      "success": "#8FCFAC",
+      "success-surface": "#20372A",
+      "warning": "#F2C681",
+      "warning-surface": "#372E23",
+      "danger": "#FFABAB",
+      "danger-surface": "#412A2A",
+      "overlay": "#070E1A88"
     }
   },
   "spacing": {
@@ -56,11 +56,11 @@
   },
   "font_size": {
     "caption": 12,
-    "secondary": 14,
-    "body": 16,
+    "secondary": 13,
+    "body": 15,
     "section": 18,
-    "title": 22,
-    "display": 28
+    "title": 19,
+    "display": 34
   },
   "radius": {
     "small": 12,
@@ -74,11 +74,11 @@
     "transition": 260
   },
   "layout": {
-    "page_padding": 16,
-    "wide_padding": 24,
-    "content_max": 1280,
-    "compact_max": 760,
-    "two_column_min": 1091
+    "page_padding": 22,
+    "wide_padding": 22,
+    "content_max": 560,
+    "compact_max": 560,
+    "two_column_min": 840
   },
   "accessibility": {
     "prototype_large_text_scale": 1.25,

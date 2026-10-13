@@ -2,8 +2,8 @@
   "app": {
     "bundleName": "com.xlennart.wristnotifications",
     "vendor": "xlennart",
-    "versionCode": 10000,
-    "versionName": "0.1.0",
+    "versionCode": 10002,
+    "versionName": "0.1.2",
     "icon": "$media:app_icon",
     "label": "$string:app_name"
   }

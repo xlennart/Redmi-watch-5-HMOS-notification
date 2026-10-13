@@ -5,7 +5,8 @@ export enum AppCommand {
   IMPORT, CANCEL_IMPORT, SAVE_CANDIDATE, DISCARD_CANDIDATE,
   AUTHORIZE, NEXT_STEP, PREVIOUS_STEP, ACCOUNT_LOGIN, ACCOUNT_SYNC, CLOSE_LOGIN,
   DELETE_CREDENTIAL, UNSUBSCRIBE, CHECK_CHANNEL, TEST_NOTIFICATION, TEST_VIBRATION,
-  ENABLE_CATEGORIES, CONFIRM_VISIBLE, CONFIRM_NOT_VISIBLE, QUICK_TEST, MATERIAL
+  ENABLE_CATEGORIES, CONFIRM_VISIBLE, CONFIRM_NOT_VISIBLE, QUICK_TEST, MATERIAL,
+  MUSIC, START_MUSIC, STOP_MUSIC
 }
 export class DeviceCandidateView {
   reference: number;
@@ -38,12 +39,15 @@ export class AppState {
   connection: string = 'unknown';
   lastAcknowledged: boolean = false;
   received: number = 0;
+  liveViewReceived: number = 0;
+  liveViewWithText: number = 0;
   acknowledged: number = 0;
   failed: number = 0;
   dropped: number = 0;
   lastCode: number = 0;
   iconStatus: string = 'notRequested';
   iconReason: string = '';
+  iconResourceAccess: string = 'unknown';
   pendingKind: string = '';
   sessionBusy: boolean = false;
   step: number = 1;
@@ -67,6 +71,15 @@ export class AppState {
   loginVisible: boolean = false;
   loginSensitivePage: boolean = false;
   loginNotice: string = '请在小米官方页面完成登录与验证码，然后点击同步。';
+  musicEnabled: boolean = false;
+  musicAvailable: boolean = false;
+  musicStage: string = 'off';
+  musicSynced: number = 0;
+  musicControlled: number = 0;
+  musicCode: number = 0;
+  musicCommandCode: number = 0;
+  systemVolumeLevel: number = 0;
+  musicControlMs: number = 0;
 
   copy(): AppState {
     const next = new AppState();
@@ -77,7 +90,9 @@ export class AppState {
     next.notificationMode = this.notificationMode; next.relayEnabled = this.relayEnabled;
     next.connection = this.connection; next.lastAcknowledged = this.lastAcknowledged;
     next.received = this.received; next.acknowledged = this.acknowledged; next.failed = this.failed;
+    next.liveViewReceived = this.liveViewReceived; next.liveViewWithText = this.liveViewWithText;
     next.dropped = this.dropped; next.lastCode = this.lastCode; next.iconStatus = this.iconStatus; next.iconReason = this.iconReason;
+    next.iconResourceAccess = this.iconResourceAccess;
     next.pendingKind = this.pendingKind; next.sessionBusy = this.sessionBusy; next.step = this.step;
     next.candidatesVisible = this.candidatesVisible;
     next.candidates = this.candidates.map(item => new DeviceCandidateView(item.reference, item.name, item.supported, item.detail));
@@ -89,6 +104,11 @@ export class AppState {
     next.diagnosticIconStatus = this.diagnosticIconStatus; next.diagnosticIconReason = this.diagnosticIconReason;
     next.notice = this.notice; next.noticeFailed = this.noticeFailed; next.large = this.large;
     next.loginVisible = this.loginVisible; next.loginSensitivePage = this.loginSensitivePage; next.loginNotice = this.loginNotice;
+    next.musicEnabled = this.musicEnabled; next.musicStage = this.musicStage;
+    next.musicAvailable = this.musicAvailable;
+    next.musicSynced = this.musicSynced; next.musicControlled = this.musicControlled;
+    next.musicCode = this.musicCode; next.musicCommandCode = this.musicCommandCode;
+    next.systemVolumeLevel = this.systemVolumeLevel; next.musicControlMs = this.musicControlMs;
     return next;
   }
 }

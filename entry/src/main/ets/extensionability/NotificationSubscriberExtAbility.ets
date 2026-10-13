@@ -1,4 +1,4 @@
-import { notificationExtensionSubscription, NotificationSubscriberExtensionAbility } from '@kit.NotificationKit';
+import { notificationExtensionSubscription, notificationManager, NotificationSubscriberExtensionAbility } from '@kit.NotificationKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { receiveNotification, cancelNotifications } from '../core/ProbeStats';
 import { ProbeStore } from '../platform/ProbeStore';
@@ -9,10 +9,11 @@ export default class NotificationSubscriberExtAbility extends NotificationSubscr
   onReceiveMessage(info: notificationExtensionSubscription.NotificationInfo): void {
     try {
       const store = new ProbeStore(this.context.filesDir);
-      const stats = receiveNotification(store.read(), info.bundleName, this.context.applicationInfo.name, Date.now());
+      const stats = receiveNotification(store.read(), info.bundleName, this.context.applicationInfo.name, Date.now(),
+        info.notificationSlotType === notificationManager.SlotType.LIVE_VIEW, !!(info.content?.title || info.content?.text));
       store.write(stats);
       hilog.info(0x0000, 'WristProbe', 'Receive callback persisted');
-      if (!this.relay) this.relay = new WatchNotificationRelay(this.context.filesDir, this.context.resourceManager);
+      if (!this.relay) this.relay = WatchNotificationRelay.shared(this.context.filesDir, this.context.resourceManager);
       this.relay.receive(info);
     } catch (_) {
       hilog.error(0x0000, 'WristProbe', 'Receive callback persistence failed');
@@ -31,7 +32,8 @@ export default class NotificationSubscriberExtAbility extends NotificationSubscr
   }
 
   onDestroy(): void {
-    this.relay?.close(); this.relay = undefined;
+    // The shared music connection is owned by EntryAbility, not the subscriber lifecycle.
+    this.relay = undefined;
     hilog.info(0x0000, 'WristProbe', 'Extension destroyed');
   }
 }

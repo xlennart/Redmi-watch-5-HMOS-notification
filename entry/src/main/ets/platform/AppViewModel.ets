@@ -4,7 +4,7 @@ import { notificationExtensionSubscription } from '@kit.NotificationKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { webview } from '@kit.ArkWeb';
 import { AppCommand, AppState, DeviceCandidateView, CredentialCandidateView } from '../core/AppState';
-import { NOTIFICATION_PROBE_ENABLED } from '../config/ProbeMode';
+import { NOTIFICATION_PROBE_ENABLED, MUSIC_CONTROL_ENABLED } from '../config/ProbeMode';
 import { isWristWearableCandidate } from '../core/WearableCandidates';
 import { DeviceCredential } from '../core/MiFitnessCredentials';
 import { FITNESS_LOGIN_URL, xiaomiLoginUrlAllowed } from '../core/MiFitnessCloud';
@@ -17,6 +17,9 @@ import { syncMiFitnessAccount, clearMiFitnessAccountSession, MI_LOGIN_CAPTURE_SC
 import { WatchChannelProbe, WatchChannelError } from './WatchChannelProbe';
 import { WatchTestSession } from './WatchTestSession';
 import { AppNotificationIcon } from './AppNotificationIcon';
+import { WatchNotificationRelay } from './WatchNotificationRelay';
+import { MusicVolumeBridge } from './MusicVolumeBridge';
+import { audio } from '@kit.AudioKit';
 
 // Owns platform calls and sensitive temporary candidates. Pages receive only AppState snapshots.
 export class AppViewModel {
@@ -35,6 +38,12 @@ export class AppViewModel {
   private channelProbe: WatchChannelProbe | undefined = undefined;
   private testSession: WatchTestSession | undefined = undefined;
   private poll: number = -1;
+  private unbindVolume: (() => void) | undefined = undefined;
+  private volumeManager: audio.AudioVolumeManager = audio.getAudioManager().getVolumeManager();
+  private volumeChanged: (event: audio.StreamVolumeEvent) => void = (event) => {
+    if (this.disposed) return;
+    this.current.systemVolumeLevel = event.volume; this.publish();
+  };
   private loginResolve: ((payload: string) => void) | undefined = undefined;
   private loginReject: ((reason: MiAccountSyncError) => void) | undefined = undefined;
   private loginCaptureRunning: boolean = false;
@@ -43,13 +52,21 @@ export class AppViewModel {
   constructor(context: common.UIAbilityContext, controller: webview.WebviewController, listener: (state: AppState) => void) {
     this.context = context; this.loginController = controller; this.listener = listener;
     this.current.notificationMode = NOTIFICATION_PROBE_ENABLED;
+    this.current.musicAvailable = MUSIC_CONTROL_ENABLED;
   }
   snapshot(): AppState { return this.current.copy(); }
   private publish(): void {
     if (this.disposed) return;
+    MusicVolumeBridge.setPanelVisible(this.current.route === 'music' && this.current.musicEnabled && this.current.musicAvailable);
     this.current.revision++; this.listener(this.current.copy());
   }
   initialize(): void {
+    try { this.current.systemVolumeLevel = audio.getAudioManager().getVolumeManager().getVolumeByStream(audio.StreamUsage.STREAM_USAGE_MUSIC); } catch (_) { }
+    this.unbindVolume = MusicVolumeBridge.bind((level: number) => {
+      if (this.disposed) return;
+      this.current.systemVolumeLevel = level; this.publish();
+    });
+    try { this.volumeManager.on('streamVolumeChange', audio.StreamUsage.STREAM_USAGE_MUSIC, this.volumeChanged); } catch (_) { }
     this.context.eventHub.on('wrist.foreground', this.foreground);
     this.restoreSelection(); this.readStats(); this.publish();
     this.execute('refresh', () => this.refresh()).catch(() => {});
@@ -75,15 +92,26 @@ export class AppViewModel {
     const probe = new ProbeStore(this.context.filesDir).read();
     const store = new RelayStore(this.context.filesDir); const stats = store.stats();
     this.current.received = probe.received; this.current.acknowledged = stats.acknowledged;
+    this.current.liveViewReceived = probe.liveViewReceived; this.current.liveViewWithText = probe.liveViewWithText;
     this.current.failed = stats.failed; this.current.dropped = stats.dropped; this.current.lastCode = stats.lastCode;
     this.current.iconStatus = stats.lastIconStatus; this.current.iconReason = stats.lastIconReason; this.current.relayEnabled = store.config().enabled;
     this.current.sessionBusy = store.active();
+    const music = store.music(); this.current.musicEnabled = store.config().musicEnabled;
+    this.current.musicStage = this.current.musicEnabled && Date.now() - music.updatedMs > 8000 ? 'unknown' : music.stage;
+    this.current.musicSynced = music.synced; this.current.musicControlled = music.controlled;
+    this.current.musicCode = music.lastCode; this.current.musicCommandCode = music.commandCode;
+    this.current.musicControlMs = music.controlMs;
     this.current.lastAcknowledged = stats.acknowledged > 0;
     // No current connection stage can be inferred from an old cumulative counter.
   }
   private async refresh(): Promise<void> {
     const epoch = this.operationEpoch;
     this.readStats(); const material = await new WatchCredentialStore().present();
+    try {
+      this.current.iconResourceAccess = abilityAccessCtrl.createAtManager().checkAccessTokenSync(
+        this.context.applicationInfo.accessTokenId, 'ohos.permission.GET_BUNDLE_INFO') ===
+        abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED ? 'granted' : 'denied';
+    } catch (_) { this.current.iconResourceAccess = 'unknown'; }
     if (epoch !== this.operationEpoch || this.disposed) return;
     this.current.material = material;
     if (this.selectedId) {
@@ -122,7 +150,8 @@ export class AppViewModel {
       if (epoch !== this.operationEpoch || this.disposed) return;
       this.current.noticeFailed = true;
       const code = (error as BusinessError).code || -3;
-      this.current.notice = code === 201 ? '当前操作未获允许，请检查相关权限或设备支持。错误码：201' :
+      this.current.notice = code === -65 ? '当前签名未取得音视频播控 ACL 权限，无法获取或控制其他应用的媒体会话。需要获准后重新签名安装。' :
+        code === 201 ? '当前操作未获允许，请检查相关权限或设备支持。错误码：201' :
         (code === 1600023 ? '当前安装包未启用通知订阅，请使用通知模式构建。' :
           `操作未完成，可重试或查看诊断。错误码：${code}`);
     } finally {
@@ -136,7 +165,11 @@ export class AppViewModel {
   }
   private cancelPending(): void {
     const interrupted = this.current.pendingKind.length > 0;
-    if (this.current.pendingKind === 'test' && this.current.testState === 'running') this.current.testState = 'cancelled';
+    if ((this.current.pendingKind === 'test' || this.current.pendingKind === 'diagnostic') &&
+      this.current.testState === 'running') this.current.testState = 'cancelled';
+    if (this.current.pendingKind === 'music-start') {
+      WatchNotificationRelay.shared(this.context.filesDir, this.context.resourceManager).stopMusic().catch(() => {});
+    }
     this.operationEpoch++; this.importJob?.cancel(); this.channelProbe?.cancel(); this.testSession?.cancel();
     this.loginReject?.(new MiAccountSyncError('已取消账号同步', -17));
     this.current.pendingKind = ''; this.current.connection = 'unknown';
@@ -147,6 +180,8 @@ export class AppViewModel {
     clearMiFitnessAccountSession(); this.current.route = route; this.current.notice = ''; this.current.noticeFailed = false;
   }
   dispose(): void {
+    try { this.volumeManager.off('streamVolumeChange', this.volumeChanged); } catch (_) { }
+    this.unbindVolume?.(); this.unbindVolume = undefined;
     this.disposed = true; clearInterval(this.poll); this.cancelPending(); this.clearCandidates();
     this.context.eventHub.off('wrist.foreground', this.foreground); clearMiFitnessAccountSession();
   }
@@ -156,6 +191,7 @@ export class AppViewModel {
       case AppCommand.HOME: this.navigate('home'); break;
       case AppCommand.DEVICE: this.navigate('device'); break;
       case AppCommand.NOTIFICATIONS: this.navigate('notifications'); break;
+      case AppCommand.MUSIC: this.navigate('music'); break;
       case AppCommand.EXIT_SETUP: this.navigate(this.current.origin); break;
       case AppCommand.CLOSE_LOGIN: this.cancelPending(); this.clearCandidates(); clearMiFitnessAccountSession(); this.current.loginVisible = false; this.current.route = 'setup'; this.current.step = 2; break;
       case AppCommand.CANCEL_IMPORT:
@@ -164,6 +200,11 @@ export class AppViewModel {
       case AppCommand.STOP_RELAY:
         this.current.testPausedRelay = false;
         this.cancelPending(); this.execute('stop', () => this.stopRelay()).catch(() => {}); return;
+      case AppCommand.STOP_MUSIC:
+        this.cancelPending(); this.execute('music-stop', async () => {
+          await WatchNotificationRelay.shared(this.context.filesDir, this.context.resourceManager).stopMusic();
+          this.readStats(); this.current.notice = '音乐控制已关闭，通知转发设置保留。';
+        }).catch(() => {}); return;
       default:
         if (this.current.pendingKind) return;
         this.dispatchIdle(command, reference); return;
@@ -173,6 +214,8 @@ export class AppViewModel {
   private dispatchIdle(command: AppCommand, reference: number): void {
     switch (command) {
       case AppCommand.DIAGNOSTICS: this.current.route = 'diagnostics'; break;
+      case AppCommand.START_MUSIC:
+        this.execute('music-start', () => this.startMusic()).catch(() => {}); return;
       case AppCommand.SETUP:
         this.current.origin = this.current.route; this.current.route = 'setup';
         this.current.step = !this.current.hasDevice ? 1 : !this.current.material ? 2 : (!this.current.permissionKnown || !this.current.permission) ? 3 : 4; break;
@@ -241,8 +284,9 @@ export class AppViewModel {
     this.publish();
   }
   private async discover(): Promise<void> {
-    if (new RelayStore(this.context.filesDir).config().enabled) {
-      this.current.notice = '重新选择前请先停止通知转发。'; return;
+    const config = new RelayStore(this.context.filesDir).config();
+    if (config.enabled || config.musicEnabled) {
+      this.current.notice = '重新选择前请先停止通知转发和音乐控制。'; return;
     }
     const epoch = this.operationEpoch;
     const result = await abilityAccessCtrl.createAtManager().requestPermissionsFromUser(this.context, ['ohos.permission.ACCESS_BLUETOOTH']);
@@ -307,7 +351,7 @@ export class AppViewModel {
     if (epoch !== this.operationEpoch || this.disposed) return;
     await this.subscribe();
     if (epoch !== this.operationEpoch || this.disposed) return;
-    const config = new RelayConfig(); config.enabled = true; config.deviceId = this.selectedId;
+    const config = new RelayStore(this.context.filesDir).config(); config.enabled = true; config.deviceId = this.selectedId;
     new RelayStore(this.context.filesDir).setConfig(config); this.current.relayEnabled = true;
     this.current.testPausedRelay = false;
     this.current.notice = '通知转发已开启。';
@@ -315,13 +359,41 @@ export class AppViewModel {
   }
   private async stopRelay(): Promise<void> {
     const store = new RelayStore(this.context.filesDir); store.setConfig(new RelayConfig());
+    const runtime = WatchNotificationRelay.shared(this.context.filesDir, this.context.resourceManager);
+    runtime.cancelSession(); await runtime.stopMusic();
     this.current.relayEnabled = false; this.current.sessionBusy = store.active(); this.publish();
     const until = Date.now() + 2500;
     while (store.active() && Date.now() < until) await new Promise<void>(resolve => { setTimeout(resolve, 100); });
     this.current.sessionBusy = store.active();
     this.current.notice = this.current.sessionBusy ? '已停止新增转发，当前会话尚未确认关闭。诊断仍暂停，请稍后刷新。' :
-      '通知转发已停止，当前转发会话已释放。已发出的帧可能已到手表，系统授权仍保留。';
+      '通知转发与音乐控制已停止，当前会话已释放。系统授权仍保留。';
     if (this.current.sessionBusy) throw new WatchChannelError('转发会话尚未释放', -42);
+  }
+  private async startMusic(): Promise<void> {
+    if (!MUSIC_CONTROL_ENABLED) {
+      this.current.noticeFailed = true; this.current.notice = '当前安装包是通知模式。音乐控制需音视频播控 ACL 权限及音乐模式安装包。'; return;
+    }
+    if (!this.current.hasDevice || !this.current.supported || !this.current.material) {
+      this.current.origin = 'music'; this.current.route = 'setup';
+      this.current.step = !this.current.hasDevice ? 1 : 2;
+      this.current.notice = '请先选择已适配手表并保存认证材料。'; return;
+    }
+    const epoch = this.operationEpoch;
+    const result = await abilityAccessCtrl.createAtManager().requestPermissionsFromUser(this.context,
+      ['ohos.permission.ACCESS_BLUETOOTH']);
+    if (epoch !== this.operationEpoch || this.disposed) return;
+    if (result.authResults.length !== 1 || result.authResults[0] !== 0) {
+      this.current.noticeFailed = true; this.current.notice = '需要蓝牙授权，尚未开启音乐控制。'; return;
+    }
+    if (abilityAccessCtrl.createAtManager().checkAccessTokenSync(this.context.applicationInfo.accessTokenId,
+      'ohos.permission.MANAGE_MEDIA_RESOURCES_FOR_PUBLIC') !== abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED) {
+      throw new WatchChannelError('调试签名缺少音视频播控ACL权限', -65);
+    }
+    await WatchNotificationRelay.shared(this.context.filesDir, this.context.resourceManager).startMusic(this.context, this.selectedId);
+    if (epoch !== this.operationEpoch || this.disposed) {
+      await WatchNotificationRelay.shared(this.context.filesDir, this.context.resourceManager).stopMusic(); return;
+    }
+    this.readStats(); this.current.notice = '音乐通道已认证连接。请先在手机播放，再从手表音乐页测试控制。';
   }
   private async importCredentials(): Promise<void> {
     this.clearCandidates(); this.current.importPhase = 'reading'; this.publish();
@@ -357,7 +429,8 @@ export class AppViewModel {
   }
   private async quickTest(): Promise<void> {
     const epoch = this.operationEpoch;
-    this.current.testState = 'running'; this.current.confirmationRequired = false; this.current.notice = '';
+    this.current.testState = 'running'; this.current.testKind = 'notification';
+    this.current.confirmationRequired = false; this.current.notice = '';
     this.current.testPausedRelay = this.current.testPausedRelay || new RelayStore(this.context.filesDir).config().enabled;
     this.publish();
     try {
@@ -376,18 +449,30 @@ export class AppViewModel {
   }
   private async diagnose(command: AppCommand): Promise<void> {
     const epoch = this.operationEpoch;
-    const store = new RelayStore(this.context.filesDir);
-    if (store.config().enabled || store.active()) { this.current.diagnosticResult = '转发仍占用通道，请明确停止并等待释放后重试。'; return; }
-    if (!this.current.supported || !this.selectedId || !await new WatchCredentialStore().present()) return;
-    if (epoch !== this.operationEpoch || this.disposed) return;
+    const channelOnly = command === AppCommand.CHECK_CHANNEL;
+    this.current.testState = channelOnly ? 'idle' : 'running';
+    this.current.testKind = command === AppCommand.TEST_VIBRATION ? 'vibration' : 'notification';
     this.current.confirmationRequired = false;
-    this.current.connection = 'connecting'; this.current.diagnosticResult = '正在检查消息通道…'; this.publish();
+    this.current.diagnosticIconStatus = 'notRequested'; this.current.diagnosticIconReason = '';
+    this.publish();
     try {
+      const store = new RelayStore(this.context.filesDir);
+      if (store.config().enabled || store.config().musicEnabled || store.active()) {
+        this.current.testState = channelOnly ? 'idle' : 'failed';
+        this.current.diagnosticResult = '通知或音乐仍占用通道，请明确停止并等待释放后重试。'; this.publish(); return;
+      }
+      const material = this.current.supported && this.selectedId ? await new WatchCredentialStore().present() : false;
+      if (epoch !== this.operationEpoch || this.disposed) return;
+      if (!material) {
+        this.current.testState = channelOnly ? 'idle' : 'failed';
+        this.current.diagnosticResult = '先选择已适配手表，并保存对应认证材料。'; this.publish(); return;
+      }
+      this.current.connection = 'connecting'; this.current.diagnosticResult = '正在检查消息通道…'; this.publish();
       if (command === AppCommand.CHECK_CHANNEL) {
         const probe = new WatchChannelProbe(); this.channelProbe = probe;
         try {
           const version = await probe.check(this.selectedId);
-          if (epoch === this.operationEpoch) this.current.diagnosticResult = `消息通道可通信，协议版本 ${version}；尚未完成密钥认证。`;
+          if (epoch === this.operationEpoch && !this.disposed) this.current.diagnosticResult = `消息通道可通信，协议版本 ${version}；尚未完成密钥认证。`;
         } finally { if (this.channelProbe === probe) this.channelProbe = undefined; }
       } else {
         const session = new WatchTestSession(); this.testSession = session;
@@ -397,21 +482,23 @@ export class AppViewModel {
             this.current.diagnosticResult = message; this.current.connection = 'authenticating'; this.publish();
           }, command === AppCommand.ENABLE_CATEGORIES, command === AppCommand.TEST_VIBRATION, undefined,
             new AppNotificationIcon(this.context.resourceManager, 'com.xlennart.wristnotifications'));
-          if (epoch === this.operationEpoch) {
+          if (epoch === this.operationEpoch && !this.disposed) {
             this.current.confirmationRequired = true;
             this.current.testState = 'awaiting'; this.current.testKind = command === AppCommand.TEST_VIBRATION ? 'vibration' : 'notification';
             this.current.diagnosticResult += command === AppCommand.TEST_VIBRATION ? '\n请确认手表是否短震两次。' : '\n请查看手表通知中心是否出现“腕间通知测试”。';
           }
         } finally {
-          if (epoch === this.operationEpoch) {
+          try { new RelayStore(this.context.filesDir).setTestIcon(session.iconStatus, session.iconReason); } catch (_) { }
+          if (epoch === this.operationEpoch && !this.disposed) {
             this.current.diagnosticIconStatus = session.iconStatus; this.current.diagnosticIconReason = session.iconReason;
           }
           if (this.testSession === session) this.testSession = undefined;
         }
       }
     } catch (error) {
-      if (epoch === this.operationEpoch) {
+      if (epoch === this.operationEpoch && !this.disposed) {
         const failure = error as WatchChannelError;
+        this.current.testState = channelOnly ? 'idle' : 'failed'; this.current.confirmationRequired = false;
         this.current.diagnosticResult = `操作未完成。阶段：${failure.stage || '消息通道'}，错误码：${failure.code || -3}`;
       }
       throw error as WatchChannelError;

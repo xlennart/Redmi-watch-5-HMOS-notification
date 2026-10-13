@@ -7,7 +7,7 @@ const dest = `${root}.cloud-build`;
 rmSync(dest, { recursive: true, force: true });
 mkdirSync(`${dest}/src`, { recursive: true });
 // Mechanical extension mapping only: tests exercise the application's actual core.
-const modules = ['ProbeStats', 'WearableCandidates', 'MiFitnessCredentials', 'MiFitnessArchive', 'MiFitnessCloud', 'WearableData', 'WearableServices', 'NotificationRelay', 'WatchWire', 'WatchProtocol', 'WatchIcon', 'AppState'];
+const modules = ['ProbeStats', 'WearableCandidates', 'MiFitnessCredentials', 'MiFitnessArchive', 'MiFitnessCloud', 'WearableData', 'WearableServices', 'NotificationRelay', 'WatchWire', 'WatchProtocol', 'WatchIcon', 'WatchMusic', 'PhoneMedia', 'AppState', 'OfflineNotificationIcons'];
 for (const name of modules) {
   const core = readFileSync(`${root}entry/src/main/ets/core/${name}.ets`, 'utf8');
   writeFileSync(`${dest}/src/${name}.ts`, core.replace(/from '\.\/([A-Za-z]+)'/g, "from './$1.js'"));
