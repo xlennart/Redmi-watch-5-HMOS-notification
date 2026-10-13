@@ -1,0 +1,22 @@
+{
+  "entries": [
+    {
+      "file": "huawei/HuaweiWallet.png",
+      "bytes": 9124,
+      "sha256": "b7703231f7b5a1c53e7fcabfafb67deb9ab4f39115ebc4945ed54224731d3583",
+      "source": "https://consumer.huawei.com/cn/support/content/zh-cn16013292/",
+      "download": "https://consumer-tkbdownload.huawei.com/ctkbfm/servlet/download/downloadServlet/H4sIAAAAAAAA_z2QzWrDQAyE32XPaZFW-6eeYrBNeik9pOewzq6dhcQJjt3SlL5718ZUt9F8aMT8iOkeh_33LYoXgWIjwvWrXyVl2aZzfPOXWT5OT8f-kC6-iwdYBtlqg4jaPt_6bqXf_XjKtGTvLSjrggbFDbMJeIxNCyE2sfWQ6SY9XkNGd8V2uY0GkCTLbB2H6Md07fdpjs4GKwIFmEM34p663o_TMD8lFSlDpazJWFcVlanBVaqsNUttEVXpCKSqHKKjkolJI9d5VeuKAI3NWZ_-nMLHfwvjMMXlt7WFXSF-_wA1Sa03JgEAAA%3D%3D.png",
+      "archiveEntry": "",
+      "rights": "Huawei brand artwork; not IconLibrary MIT licensed"
+    },
+    {
+      "file": "huawei/HuaweiPay.png",
+      "bytes": 32522,
+      "sha256": "a111b80f901affe11d2a63cb63a352bea98ca91a5abae5592f9ee60e2ee34389",
+      "source": "https://developer.huawei.com/consumer/cn/design/resource/",
+      "download": "https://alliance-communityfile-drcn.dbankcdn.com/FileServer/getFile/cmtyManage/011/111/111/0000000000011111111.20260611171426.56608684767199901195402941487889:50001231000000:2800:5E14F7BA13CB3C664078DE3779BBBE97173A8315D29BD4C0578EF1A912FBACDE.zip?needInitFileName=true",
+      "archiveEntry": "PNG+SVG/PNG/*@1x.png (single matching entry)",
+      "rights": "Huawei brand artwork; not IconLibrary MIT licensed"
+    }
+  ]
+}

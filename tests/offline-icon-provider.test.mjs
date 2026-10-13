@@ -35,6 +35,14 @@ test('bad bundled PNG is rejected before native decoding and preserves a bounded
   assert.ok(f.stored.every(value => value === 0));
 });
 
+test('native Huawei Pay source uses its own official artwork without querying another application', async () => {
+  const f = await fixture(); const provider = new f.Provider(f.resources, 'com.huawei.hms.payment');
+  const bytes = await provider.load(176, 2);
+  assert.equal(bytes.length, 123904);
+  assert.equal(provider.reason, 'encoded_offline'); assert.equal(f.calls.bundle, 0);
+  assert.deepEqual(f.calls.files, ['notification-icons/huawei/HuaweiPay.png']);
+});
+
 test('unmapped source never borrows another app icon or interprets the package as a rawfile path', async () => {
   const f = await fixture(); const provider = new f.Provider(f.resources, '../WeChat.png');
   assert.equal(await provider.load(176, 2), undefined);
