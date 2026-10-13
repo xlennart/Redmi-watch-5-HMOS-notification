@@ -339,7 +339,7 @@ struct Index {
       this.row('来源图标读取', this.view.iconResourceAccess === 'granted' ? '系统已许可' :
         this.view.iconResourceAccess === 'denied' ? '系统未许可' : '尚未确认')
       if (this.view.iconResourceAccess === 'denied') {
-        this.note('当前应用不能读取其他应用的图标，因此通知可能显示默认图标。系统通知授权开关不能授予这项能力。')
+        this.note('系统资源读取未获许可。微信、QQ、支付宝、钉钉、淘宝、美团、QQ音乐使用内置离线图标；未覆盖来源仍可能显示默认图标。')
       }
       Text('最近一次图标处理：' + this.view.iconStatus + ' · ' + this.view.iconReason).fontSize(13).fontColor(this.muted())
       Text('本次测试图标：' + this.view.diagnosticIconStatus + ' · ' + this.view.diagnosticIconReason).fontSize(13).fontColor(this.muted())

@@ -188,7 +188,8 @@ export class NotificationIconExchange {
             const chunk = iconMassChunk(payload, sliceLength, i);
             try { await this.transport.sendChunk(chunk); } finally { chunk.fill(0); }
           }
-          finished = true; this.status = 'uploaded'; this.reason = 'transport_ack'; // No visible UI claim.
+          finished = true; this.status = 'uploaded';
+          this.reason = this.provider.reason === 'encoded_offline' ? 'offline_transport_ack' : 'transport_ack'; // No visible UI claim.
         } catch (_) { this.status = 'failed'; }
         finally {
           if (started && !finished && digest.length === 16) {

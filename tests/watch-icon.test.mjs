@@ -185,6 +185,13 @@ test('watch cached response and a concrete provider failure stay distinct from v
   assert.equal(exchange.status, 'unavailable'); assert.equal(exchange.reason, 'media_9001002');
 });
 
+test('offline source records transfer provenance without claiming visible rendering', async () => {
+  const f = fixture();
+  const exchange = new NotificationIconExchange(name, {reason: 'encoded_offline', async load() { return f.pixels; }}, f.transport);
+  await exchange.request(); await exchange.handle(15, ready());
+  assert.equal(exchange.status, 'uploaded'); assert.equal(exchange.reason, 'offline_transport_ack');
+});
+
 test('encoded PNG icons accept bounded dimensions and reject malformed or oversized input', () => {
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLttAAAAABJRU5ErkJggg==', 'base64');
   validateIconData(png, 2, 6);
