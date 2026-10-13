@@ -575,6 +575,7 @@ struct Index {
         .onOverrideUrlLoading((request: WebResourceRequest) => { return request.isMainFrame() && !xiaomiLoginUrlAllowed(request.getRequestUrl()); })
       this.note({ text: '密码与验证码在小米官方页面输入，应用不保存账号会话。' })
     }.width('100%').height('100%').padding(16).backgroundColor(this.pageColor())
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
   }
   @Builder private header() {
     Row({ space: 10 }) {
@@ -632,6 +633,7 @@ struct Index {
           }.width('100%').padding({ left: 18, right: 18 }).backgroundColor(this.pageColor())
         }
       }.width('100%').height('100%').backgroundColor(this.pageColor())
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
     }
   }
 }
