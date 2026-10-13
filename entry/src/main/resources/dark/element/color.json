@@ -1,56 +1,18 @@
 {
   "color": [
-    {
-      "name": "start_window_background",
-      "value": "#111B1E"
-    },
-    {
-      "name": "wrist_page",
-      "value": "#111B1E"
-    },
-    {
-      "name": "wrist_surface",
-      "value": "#1C2A2E"
-    },
-    {
-      "name": "wrist_alt",
-      "value": "#26373B"
-    },
-    {
-      "name": "wrist_text",
-      "value": "#F0F6F3"
-    },
-    {
-      "name": "wrist_muted",
-      "value": "#B2C6C4"
-    },
-    {
-      "name": "wrist_action",
-      "value": "#80D9D6"
-    },
-    {
-      "name": "wrist_on_action",
-      "value": "#092D32"
-    },
-    {
-      "name": "wrist_action_surface",
-      "value": "#243F41"
-    },
-    {
-      "name": "wrist_warning",
-      "value": "#F4C779"
-    },
-    {
-      "name": "wrist_warning_surface",
-      "value": "#463720"
-    },
-    {
-      "name": "wrist_danger",
-      "value": "#FFB2A6"
-    },
-    {
-      "name": "wrist_divider",
-      "value": "#42585A"
-    }
+    { "name": "start_window_background", "value": "#11151D" },
+    { "name": "wrist_page", "value": "#11151D" },
+    { "name": "wrist_surface", "value": "#1C2330" },
+    { "name": "wrist_alt", "value": "#25334F" },
+    { "name": "wrist_text", "value": "#EDF1F7" },
+    { "name": "wrist_muted", "value": "#AEB8C8" },
+    { "name": "wrist_action", "value": "#91AEFF" },
+    { "name": "wrist_on_action", "value": "#142347" },
+    { "name": "wrist_action_surface", "value": "#25334F" },
+    { "name": "wrist_warning", "value": "#F2C681" },
+    { "name": "wrist_warning_surface", "value": "#372E23" },
+    { "name": "wrist_danger", "value": "#FFABAB" },
+    { "name": "wrist_divider", "value": "#303B4E" },
+    { "name": "wrist_success", "value": "#8FCFAC" }
   ]
 }
